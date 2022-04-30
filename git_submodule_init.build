@@ -1,4 +1,4 @@
-target main {
+target main() {
   sequence([
     "git submodule init",
     "git submodule update",

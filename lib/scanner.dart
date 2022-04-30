@@ -1,3 +1,5 @@
+import 'source_code.dart';
+
 enum TokenType {
   // keywords
 
@@ -49,7 +51,11 @@ class StringToken extends Token {
 }
 
 class Scanner {
-  Scanner(this.source);
+  Scanner._(this.source);
+
+  factory Scanner.fromSourceCode(SourceCode sourceCode) {
+    return Scanner._(sourceCode.text);
+  }
 
   final String source;
   final List<Token> _tokenList = <Token>[];
@@ -57,7 +63,7 @@ class Scanner {
   int _index = 0;
   int _line = 1;
   int _lastNewlineIndex = 0;
-  int get _char => _index - _lastNewlineIndex;
+  int get _char => _index - _lastNewlineIndex + 1;
 
   // TODO figure out unicode
   Future<List<Token>> scan() async {
@@ -99,7 +105,7 @@ class Scanner {
   ];
 
   bool _scanKeyword() {
-    // TODO this can be faster
+    // TODO this can be faster, use linear search, not [.startsWith()]
     final String rest = source.substring(_index);
     for (final keyword in kKeywords) {
       if (rest.startsWith(keyword)) {
