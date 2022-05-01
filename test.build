@@ -1,0 +1,3 @@
+target main() {
+  run("echo hello world");
+}
