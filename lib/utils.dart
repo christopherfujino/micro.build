@@ -22,7 +22,7 @@ Future<void> stream(
     environment: env,
     workingDirectory: workingDirectory,
   );
-  final exitCode = await process.exitCode;
+  final int exitCode = await process.exitCode;
   if (exitCode != 0) {
     throw Exception(
       'Command "${command.join(' ')}" failed with code $exitCode',
@@ -47,7 +47,7 @@ io.Directory get repoRoot {
 /// Will throw an [Exception] if the path does not exist.
 void checkPath(String path) {
   print('checking the existence of $path...');
-  final type = io.FileSystemEntity.typeSync(path);
+  final io.FileSystemEntityType type = io.FileSystemEntity.typeSync(path);
   final io.FileSystemEntity entity;
   if (type == io.FileSystemEntityType.file) {
     entity = io.File(path);

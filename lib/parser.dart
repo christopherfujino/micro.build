@@ -4,7 +4,7 @@ import 'source_code.dart';
 class Config {
   const Config(this.declarations);
 
-  final List declarations;
+  final List<Declaration> declarations;
 }
 
 class Parser {
@@ -26,7 +26,7 @@ class Parser {
   }
 
   Future<Config> parse() async {
-    final List declarations = [];
+    final List<Declaration> declarations = <Declaration>[];
     while (_currentToken != null) {
       declarations.add(_parseDeclaration());
     }
@@ -200,6 +200,7 @@ class Parser {
   }
 }
 
+// TODO track token for error handling
 abstract class Declaration {
   Declaration({
     required this.name,

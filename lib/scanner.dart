@@ -36,6 +36,7 @@ class Token {
   final int line;
   final int char;
 
+  @override
   String toString() => type.name;
 }
 
@@ -108,7 +109,7 @@ class Scanner {
   bool _scanKeyword() {
     // TODO this can be faster, use linear search, not [.startsWith()]
     final String rest = source.substring(_index);
-    for (final keyword in kKeywords) {
+    for (final String keyword in kKeywords) {
       if (rest.startsWith(keyword)) {
         _index += keyword.length;
         _tokenList.add(
