@@ -47,6 +47,7 @@ class StringToken extends Token {
     required super.char,
   });
 
+  /// The contents of this string, excluding quotes.
   final String value;
 }
 

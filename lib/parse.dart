@@ -27,17 +27,15 @@ class Parser {
 
   Future<Config> parse() async {
     final List declarations = [];
-    Declaration? currentDeclaration = _parseDeclaration();
-    while (currentDeclaration != null) {
-      declarations.add(currentDeclaration);
-      currentDeclaration = _parseDeclaration();
+    while (_currentToken != null) {
+      declarations.add(_parseDeclaration());
     }
 
     return Config(declarations);
   }
 
   /// Parses [TargetDeclaration].
-  Declaration? _parseDeclaration() {
+  Declaration _parseDeclaration() {
     final Token currentToken = _currentToken!;
     switch (currentToken.type) {
       case TokenType.target:
@@ -59,23 +57,24 @@ class Parser {
 
   /// Parse a [TargetDeclaration].
   ///
-  /// target_declaration ::= "target", identifier, "(", ")", "{", statement*, "}"
+  /// target_declaration ::= "target", identifier, "(", arg_list, ")", "{", statement*, "}"
   TargetDeclaration _parseTargetDeclaration() {
     _consume(TokenType.target);
     final StringToken name = _consume(TokenType.identifier) as StringToken;
 
     _consume(TokenType.openParen);
-    // TODO argList
+    final List<Expression> deps = _parseArgList();
     _consume(TokenType.closeParen);
     _consume(TokenType.openCurlyBracket);
     final List<Statement> statements = <Statement>[];
-    while (_currentToken?.type != TokenType.closeCurlyBracket) {
+    while (_currentToken!.type != TokenType.closeCurlyBracket) {
       statements.add(_parseStatement());
     }
-
+    _consume(TokenType.closeCurlyBracket);
     return TargetDeclaration(
       name: name.value,
       statements: statements,
+      deps: deps,
     );
   }
 
@@ -88,18 +87,45 @@ class Parser {
   // bare_statement ::= expression, ";"
   BareStatement _parseExpressionStatement() {
     final Expression expression = _parseExpression();
-    if (_currentToken!.type != TokenType.semicolon) {
-      _throwParseError(_currentToken!, 'Parse error: at ${_currentToken}');
-    }
+    _consume(TokenType.semicolon);
     return BareStatement(expression: expression);
   }
 
   // Expressions
 
   Expression _parseExpression() {
-    //_tokenLookahead();
-    Expression expression = _parseCallExpression();
-    return expression;
+    if (_currentToken!.type == TokenType.stringLiteral) {
+      return _parseStringLiteral();
+    }
+    if (_tokenLookahead(const <TokenType>[
+      TokenType.identifier,
+      TokenType.openParen,
+    ])) {
+      return _parseCallExpression();
+    }
+    if (_currentToken!.type == TokenType.openSquareBracket) {
+      return _parseListLiteral();
+    }
+    _throwParseError(_currentToken!, 'Tried but failed to parse an expression');
+  }
+
+  ListLiteral _parseListLiteral() {
+    final List<Expression> elements = <Expression>[];
+
+    _consume(TokenType.openSquareBracket);
+    while (_currentToken!.type != TokenType.closeSquareBracket) {
+      elements.add(_parseExpression());
+
+      if (_currentToken!.type == TokenType.closeSquareBracket) {
+        break;
+      }
+      // The previous break will allow optional trailing comma
+      _consume(TokenType.comma);
+    }
+
+    _consume(TokenType.closeSquareBracket);
+
+    return ListLiteral(elements);
   }
 
   // call_expression ::= identifier, "(", arg_list?, ")"
@@ -133,6 +159,11 @@ class Parser {
     return list;
   }
 
+  StringLiteral _parseStringLiteral() {
+    final StringToken token = _consume(TokenType.stringLiteral) as StringToken;
+    return StringLiteral(token.value);
+  }
+
   /// Consume and return the next token iff it matches [type].
   ///
   /// Throws [Exception] if the type is not correct.
@@ -140,7 +171,8 @@ class Parser {
     // coerce type as this should only be called if you know what's there.
     final Token consumedToken = _currentToken!;
     if (consumedToken.type != type) {
-      _throwParseError(consumedToken, 'Expected a ${type.name}, got a ${consumedToken.type.name}');
+      _throwParseError(consumedToken,
+          'Expected a ${type.name}, got a ${consumedToken.type.name}');
     }
     _index += 1;
     return consumedToken;
@@ -180,9 +212,11 @@ class TargetDeclaration extends Declaration {
   TargetDeclaration({
     required super.name,
     required this.statements,
+    required this.deps,
   });
 
   final Iterable<Statement> statements;
+  final Iterable<Expression> deps;
 }
 
 abstract class Statement {}
@@ -203,7 +237,17 @@ class CallExpression extends Expression {
   List<Expression> argList;
 }
 
-class ArgList {}
+class StringLiteral extends Expression {
+  StringLiteral(this.value);
+
+  final String value;
+}
+
+class ListLiteral extends Expression {
+  ListLiteral(this.elements);
+
+  final List<Expression> elements;
+}
 
 class ParseError implements Exception {
   const ParseError(this.message);
