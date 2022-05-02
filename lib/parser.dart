@@ -4,7 +4,7 @@ import 'source_code.dart';
 class Config {
   const Config(this.declarations);
 
-  final List<Declaration> declarations;
+  final List<Decl> declarations;
 }
 
 class Parser {
@@ -26,20 +26,20 @@ class Parser {
   }
 
   Future<Config> parse() async {
-    final List<Declaration> declarations = <Declaration>[];
+    final List<Decl> declarations = <Decl>[];
     while (_currentToken != null) {
-      declarations.add(_parseDeclaration());
+      declarations.add(_decl());
     }
 
     return Config(declarations);
   }
 
-  /// Parses [TargetDeclaration].
-  Declaration _parseDeclaration() {
+  /// Parses [TargetDecl].
+  Decl _decl() {
     final Token currentToken = _currentToken!;
     switch (currentToken.type) {
       case TokenType.target:
-        return _parseTargetDeclaration();
+        return _targetDecl();
       default:
         _throwParseError(
           currentToken,
@@ -55,66 +55,66 @@ class Parser {
     );
   }
 
-  /// Parse a [TargetDeclaration].
+  /// Parse a [TargetDecl].
   ///
   /// target_declaration ::= "target", identifier, "(", arg_list, ")", "{", statement*, "}"
-  TargetDeclaration _parseTargetDeclaration() {
+  TargetDecl _targetDecl() {
     _consume(TokenType.target);
     final StringToken name = _consume(TokenType.identifier) as StringToken;
 
     _consume(TokenType.openParen);
-    final List<Expression> deps = _parseArgList();
+    final List<Expr> deps = _argList();
     _consume(TokenType.closeParen);
     _consume(TokenType.openCurlyBracket);
-    final List<Statement> statements = <Statement>[];
+    final List<Stmt> statements = <Stmt>[];
     while (_currentToken!.type != TokenType.closeCurlyBracket) {
-      statements.add(_parseStatement());
+      statements.add(_stmt());
     }
     _consume(TokenType.closeCurlyBracket);
-    return TargetDeclaration(
+    return TargetDecl(
       name: name.value,
       statements: statements,
       deps: deps,
     );
   }
 
-  Statement _parseStatement() {
-    Statement statement = _parseExpressionStatement();
+  Stmt _stmt() {
     // TODO implement other statements
+    final Stmt statement = _exprStmt();
     return statement;
   }
 
   // bare_statement ::= expression, ";"
-  BareStatement _parseExpressionStatement() {
-    final Expression expression = _parseExpression();
+  BareStmt _exprStmt() {
+    final Expr expression = _expr();
     _consume(TokenType.semicolon);
-    return BareStatement(expression: expression);
+    return BareStmt(expression: expression);
   }
 
   // Expressions
 
-  Expression _parseExpression() {
+  Expr _expr() {
     if (_currentToken!.type == TokenType.stringLiteral) {
-      return _parseStringLiteral();
+      return _stringLiteral();
     }
     if (_tokenLookahead(const <TokenType>[
       TokenType.identifier,
       TokenType.openParen,
     ])) {
-      return _parseCallExpression();
+      return _callExpr();
     }
     if (_currentToken!.type == TokenType.openSquareBracket) {
-      return _parseListLiteral();
+      return _listLiteral();
     }
     _throwParseError(_currentToken!, 'Tried but failed to parse an expression');
   }
 
-  ListLiteral _parseListLiteral() {
-    final List<Expression> elements = <Expression>[];
+  ListLiteral _listLiteral() {
+    final List<Expr> elements = <Expr>[];
 
     _consume(TokenType.openSquareBracket);
     while (_currentToken!.type != TokenType.closeSquareBracket) {
-      elements.add(_parseExpression());
+      elements.add(_expr());
 
       if (_currentToken!.type == TokenType.closeSquareBracket) {
         break;
@@ -129,26 +129,26 @@ class Parser {
   }
 
   // call_expression ::= identifier, "(", arg_list?, ")"
-  CallExpression _parseCallExpression() {
+  CallExpr _callExpr() {
     final StringToken name = _consume(TokenType.identifier) as StringToken;
-    List<Expression>? argList;
+    List<Expr>? argList;
     _consume(TokenType.openParen);
     if (_currentToken?.type != TokenType.closeParen) {
-      argList = _parseArgList();
+      argList = _argList();
     }
     _consume(TokenType.closeParen);
-    return CallExpression(
+    return CallExpr(
       name.value,
-      argList ?? const <Expression>[],
+      argList ?? const <Expr>[],
     );
   }
 
   /// Parses expressions (comma delimited) until a [TokenType.closeParen] is
   /// reached (but not consumed).
-  List<Expression> _parseArgList() {
-    final List<Expression> list = <Expression>[];
+  List<Expr> _argList() {
+    final List<Expr> list = <Expr>[];
     while (_currentToken?.type != TokenType.closeParen) {
-      list.add(_parseExpression());
+      list.add(_expr());
       if (_currentToken?.type == TokenType.closeParen) {
         break;
       }
@@ -159,7 +159,7 @@ class Parser {
     return list;
   }
 
-  StringLiteral _parseStringLiteral() {
+  StringLiteral _stringLiteral() {
     final StringToken token = _consume(TokenType.stringLiteral) as StringToken;
     return StringLiteral(token.value);
   }
@@ -201,53 +201,67 @@ class Parser {
 }
 
 // TODO track token for error handling
-abstract class Declaration {
-  Declaration({
+abstract class Decl {
+  const Decl({
     required this.name,
   });
 
   final String name;
 }
 
-class TargetDeclaration extends Declaration {
-  TargetDeclaration({
+class TargetDecl extends Decl {
+  TargetDecl({
     required super.name,
     required this.statements,
     required this.deps,
   });
 
-  final Iterable<Statement> statements;
-  final Iterable<Expression> deps;
+  final Iterable<Stmt> statements;
+  final Iterable<Expr> deps;
 }
 
-abstract class Statement {}
+class FunctionDecl extends Decl {
+  const FunctionDecl({
+    required super.name,
+    required this.statements,
+  });
 
-class BareStatement extends Statement {
-  BareStatement({required this.expression});
-
-  final Expression expression;
+  final List<Stmt> statements;
 }
 
-abstract class Expression {}
+abstract class Stmt {}
 
-class CallExpression extends Expression {
-  CallExpression(this.name, this.argList);
+/// Interface for [ReturnStmt], etc.
+abstract class FunctionExitStmt extends Stmt {
+
+}
+
+class BareStmt extends Stmt {
+  BareStmt({required this.expression});
+
+  final Expr expression;
+}
+
+abstract class Expr {}
+
+class CallExpr extends Expr {
+  CallExpr(this.name, this.argList);
 
   final String name;
 
-  List<Expression> argList;
+  List<Expr> argList;
 }
 
-class StringLiteral extends Expression {
+class StringLiteral extends Expr {
   StringLiteral(this.value);
 
   final String value;
 }
 
-class ListLiteral extends Expression {
+class ListLiteral extends Expr {
   ListLiteral(this.elements);
 
-  final List<Expression> elements;
+  final List<Expr> elements;
 }
 
 class ParseError implements Exception {

@@ -5,36 +5,83 @@ class Interpreter {
 
   final Config config;
 
-  final Map<String, TargetDeclaration> _registeredTargets =
-      <String, TargetDeclaration>{};
+  final Map<String, FunctionDecl> _registeredFunctions =
+      <String, FunctionDecl>{
+        'run': const FunctionDecl(name: 'run'),
+      };
+
+  final Map<String, TargetDecl> _registeredTargets =
+      <String, TargetDecl>{};
 
   Future<void> interpret(String targetName) async {
     // Register declarations
     _registerDeclarations();
 
+    // interpret target
+    _target(targetName);
+  }
+
+  void _target(String name) {
     // Determine target to run from [targetName]
-    final TargetDeclaration? target = _registeredTargets[targetName];
+    final TargetDecl? target = _registeredTargets[name];
     if (target == null) {
-      throw RuntimeError('There is no registered target named $targetName');
+      _throwRuntimeError('There is no defined target named $name');
     }
 
-    // interpret target
+    target.statements.forEach(_stmt);
+  }
+
+  void _stmt(Stmt stmt) {
+    if (stmt is FunctionExitStmt) {
+      _throwRuntimeError('Unimplemented statement type ${stmt.runtimeType}');
+    }
+    if (stmt is BareStmt) {
+      _bareStatement(stmt);
+      return;
+    }
+    _throwRuntimeError(
+        'Unimplemented statement type ${stmt.runtimeType}');
   }
 
   void _registerDeclarations() {
-    for (final Declaration dec in config.declarations) {
-      if (dec is TargetDeclaration) {
+    for (final Decl dec in config.declarations) {
+      if (dec is TargetDecl) {
         // TODO should check globally for any identifier with this name
         if (_registeredTargets.containsKey(dec.name)) {
-          throw RuntimeError('Duplicate target named ${dec.name}');
+          _throwRuntimeError('Duplicate target named ${dec.name}');
         }
         _registeredTargets[dec.name] = dec;
       } else {
-        throw RuntimeError('Unknown declaration type ${dec.runtimeType}');
+        _throwRuntimeError('Unknown declaration type ${dec.runtimeType}');
       }
     }
   }
+
+  void _bareStatement(BareStmt statement) {
+    _expression(statement.expression);
+  }
+
+  _Object _expression(Expr expr) {
+    if (expr is CallExpr) {
+      return _callExpr(expr);
+    }
+    _throwRuntimeError(
+        'Unimplemented expression type ${expr.runtimeType}');
+  }
+
+  _Object _callExpr(CallExpr expr) {
+    final FunctionDecl? func = _registeredFunctions[expr.name];
+    if (func == null) {
+      _throwRuntimeError('Tried to call undeclared function ${expr.name}');
+    }
+    func.statements.forEach(_stmt);
+  }
 }
+
+class _Object {}
+
+// TODO accept token
+Never _throwRuntimeError(String message) => throw RuntimeError(message);
 
 class RuntimeError implements Exception {
   const RuntimeError(this.message);
