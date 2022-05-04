@@ -229,11 +229,18 @@ class FunctionDecl extends Decl {
   final List<Stmt> statements;
 }
 
-abstract class Stmt {}
+abstract class Stmt {
+  const Stmt();
+}
+
+/// A [stmt] implemented in the interpreter.
+abstract class ExternalStmt extends Stmt {}
 
 /// Interface for [ReturnStmt], etc.
 abstract class FunctionExitStmt extends Stmt {
+  const FunctionExitStmt(this.returnValue);
 
+  final Expr returnValue;
 }
 
 class BareStmt extends Stmt {

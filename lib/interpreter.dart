@@ -5,13 +5,18 @@ class Interpreter {
 
   final Config config;
 
-  final Map<String, FunctionDecl> _registeredFunctions =
-      <String, FunctionDecl>{
-        'run': const FunctionDecl(name: 'run'),
-      };
+  final Map<String, FunctionDecl> _registeredFunctions = <String, FunctionDecl>{
+    'run': const FunctionDecl(
+      name: 'run',
+      statements: <Stmt>[],
+    ),
+    'sequence': const FunctionDecl(
+      name: 'sequence',
+      statements: <Stmt>[],
+    ),
+  };
 
-  final Map<String, TargetDecl> _registeredTargets =
-      <String, TargetDecl>{};
+  final Map<String, TargetDecl> _registeredTargets = <String, TargetDecl>{};
 
   Future<void> interpret(String targetName) async {
     // Register declarations
@@ -39,8 +44,7 @@ class Interpreter {
       _bareStatement(stmt);
       return;
     }
-    _throwRuntimeError(
-        'Unimplemented statement type ${stmt.runtimeType}');
+    _throwRuntimeError('Unimplemented statement type ${stmt.runtimeType}');
   }
 
   void _registerDeclarations() {
@@ -58,23 +62,28 @@ class Interpreter {
   }
 
   void _bareStatement(BareStmt statement) {
-    _expression(statement.expression);
+    _expr(statement.expression);
   }
 
-  _Object _expression(Expr expr) {
+  _Object? _expr(Expr expr) {
     if (expr is CallExpr) {
       return _callExpr(expr);
     }
-    _throwRuntimeError(
-        'Unimplemented expression type ${expr.runtimeType}');
+    _throwRuntimeError('Unimplemented expression type ${expr.runtimeType}');
   }
 
-  _Object _callExpr(CallExpr expr) {
+  _Object? _callExpr(CallExpr expr) {
     final FunctionDecl? func = _registeredFunctions[expr.name];
     if (func == null) {
       _throwRuntimeError('Tried to call undeclared function ${expr.name}');
     }
-    func.statements.forEach(_stmt);
+    for (final Stmt stmt in func.statements) {
+      if (stmt is FunctionExitStmt) {
+        return _expr(stmt.returnValue);
+      }
+      _stmt(stmt);
+    }
+    return null;
   }
 }
 

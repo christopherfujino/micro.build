@@ -36,12 +36,12 @@ target main() {
     final Config config =
         await Parser(tokenList: tokenList, source: sourceCode).parse();
     await expectLater(
-      Interpreter(config).interpret('non-main'),
+      () => Interpreter(config).interpret('non-main'),
       throwsA(
         isA<RuntimeError>().having(
           (RuntimeError error) => error.message,
           'accurate message',
-          contains('There is no registered target named non-main'),
+          contains('There is no defined target named non-main'),
         ),
       ),
     );
