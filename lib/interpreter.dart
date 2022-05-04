@@ -128,15 +128,15 @@ class Interpreter {
   }
 
   void _registerDeclarations() {
-    for (final Decl dec in config.declarations) {
-      if (dec is TargetDecl) {
+    for (final Decl decl in config.declarations) {
+      if (decl is TargetDecl) {
         // TODO should check globally for any identifier with this name
-        if (_registeredTargets.containsKey(dec.name)) {
-          _throwRuntimeError('Duplicate target named ${dec.name}');
+        if (_registeredTargets.containsKey(decl.name)) {
+          _throwRuntimeError('Duplicate target named ${decl.name}');
         }
-        _registeredTargets[dec.name] = dec;
+        _registeredTargets[decl.name] = decl;
       } else {
-        _throwRuntimeError('Unknown declaration type ${dec.runtimeType}');
+        _throwRuntimeError('Unknown declaration type ${decl.runtimeType}');
       }
     }
   }
