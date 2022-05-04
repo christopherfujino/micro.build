@@ -8,7 +8,9 @@ abstract class ExtFuncDecl extends FunctionDecl {
   }) : super(statements: const <Stmt>[]);
 
   Future<Object?> _interpret(
-      List<Expr> argExpressions, Interpreter interpreter);
+    List<Expr> argExpressions,
+    Interpreter interpreter,
+  );
 }
 
 class RunFuncDecl extends ExtFuncDecl {
@@ -16,14 +18,17 @@ class RunFuncDecl extends ExtFuncDecl {
 
   @override
   Future<Object?> _interpret(
-      List<Expr> argExpressions, Interpreter interpreter) async {
+    List<Expr> argExpressions,
+    Interpreter interpreter,
+  ) async {
     final List<String> args = <String>[];
 
     for (final Expr argExpr in argExpressions) {
       final Object? value = await interpreter._expr(argExpr);
       if (value is! String) {
         _throwRuntimeError(
-            'Expected an arg of type String, got ${value.runtimeType}');
+          'Expected an arg of type String, got ${value.runtimeType}',
+        );
       }
       args.add(value);
     }
@@ -37,7 +42,9 @@ class SequenceFuncDecl extends ExtFuncDecl {
 
   @override
   Future<Object?> _interpret(
-      List<Expr> argExpressions, Interpreter interpreter) async {
+    List<Expr> argExpressions,
+    Interpreter interpreter,
+  ) async {
     if (argExpressions.length != 1) {
       _throwRuntimeError('Expected one arg, got $argExpressions');
     }
