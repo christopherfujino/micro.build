@@ -7,7 +7,8 @@ abstract class ExtFuncDecl extends FunctionDecl {
     required super.name,
   }) : super(statements: const <Stmt>[]);
 
-  Future<Object?> _interpret(List<Expr> argExpressions, Interpreter interpreter);
+  Future<Object?> _interpret(
+      List<Expr> argExpressions, Interpreter interpreter);
 }
 
 class RunFuncDecl extends ExtFuncDecl {
@@ -16,22 +17,60 @@ class RunFuncDecl extends ExtFuncDecl {
   @override
   Future<Object?> _interpret(
       List<Expr> argExpressions, Interpreter interpreter) async {
-    final List<String> args = await Future.wait<String>(
-        argExpressions.map<Future<String>>((Expr expr) async {
-      return (await interpreter._expr(expr))! as String;
-    }));
-    // TODO validate args
+    final List<String> args = <String>[];
+
+    for (final Expr argExpr in argExpressions) {
+      final Object? value = await interpreter._expr(argExpr);
+      if (value is! String) {
+        _throwRuntimeError(
+            'Expected an arg of type String, got ${value.runtimeType}');
+      }
+      args.add(value);
+    }
     final String command = args.first;
-    final List<String> commandParts = command.split(' ');
-    final String executable = commandParts.first;
-    final List<String> rest = commandParts.sublist(1);
-    final io.Process process = await io.Process.start(
-      executable,
-      rest,
-      mode: io.ProcessStartMode.inheritStdio,
-    );
-    return process.exitCode;
+    return _runProcess(command);
   }
+}
+
+class SequenceFuncDecl extends ExtFuncDecl {
+  const SequenceFuncDecl() : super(name: 'sequence');
+
+  @override
+  Future<Object?> _interpret(
+      List<Expr> argExpressions, Interpreter interpreter) async {
+    if (argExpressions.length != 1) {
+      _throwRuntimeError('Expected one arg, got $argExpressions');
+    }
+    final Object? value = await interpreter._expr(argExpressions.first);
+    if (value is! List<Object?>) {
+      _throwRuntimeError(
+        'Expected an arg of type List, got ${value.runtimeType}',
+      );
+    }
+
+    for (final Object? command in value) {
+      if (command is! String) {
+        _throwRuntimeError('Foo bar');
+      }
+      final int exitCode = await _runProcess(command);
+      if (exitCode != 0) {
+        _throwRuntimeError('Command "$command" exited with non-zero');
+      }
+    }
+    return null;
+  }
+}
+
+Future<int> _runProcess(String command) async {
+  final List<String> commandParts = command.split(' ');
+  final String executable = commandParts.first;
+  final List<String> rest = commandParts.sublist(1);
+  final io.Process process = await io.Process.start(
+    executable,
+    rest,
+    mode: io.ProcessStartMode.inheritStdio,
+  );
+  return process.exitCode;
 }
 
 class Interpreter {
@@ -45,6 +84,7 @@ class Interpreter {
   static const Map<String, ExtFuncDecl> _externalFunctions =
       <String, ExtFuncDecl>{
     'run': RunFuncDecl(),
+    'sequence': SequenceFuncDecl(),
   };
 
   final Map<String, TargetDecl> _registeredTargets = <String, TargetDecl>{};
@@ -103,6 +143,10 @@ class Interpreter {
       return _callExpr(expr);
     }
 
+    if (expr is ListLiteral) {
+      return _list(expr.elements);
+    }
+
     if (expr is StringLiteral) {
       return _stringLiteral(expr);
     }
@@ -126,6 +170,14 @@ class Interpreter {
       await _stmt(stmt);
     }
     return null;
+  }
+
+  Future<List<Object?>> _list(List<Expr> expressions) async {
+    final List<Object?> elements = <Object?>[];
+    for (final Expr element in expressions) {
+      elements.add(await _expr(element));
+    }
+    return elements;
   }
 
   Future<String> _stringLiteral(StringLiteral expr) async {
