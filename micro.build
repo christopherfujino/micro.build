@@ -1,3 +1,10 @@
 target main() {
+}
+
+target test() {
   run("dart test --reporter=expanded --concurrency=1");
+}
+
+target packages() {
+  run("dart pub get");
 }
