@@ -1,6 +1,6 @@
 import 'dart:io' as io;
 
-late final Future<List<io.File>> buildFiles = (() async {
+final Future<List<io.File>> buildFiles = (() async {
   if (io.Platform.isWindows) {
     throw UnimplementedError('hard-coded posix paths');
   }

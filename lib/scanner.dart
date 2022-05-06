@@ -126,7 +126,7 @@ class Scanner {
   }
 
   // TODO: handle escapes?
-  static final kStringPattern = RegExp(r'"(.*)"');
+  static final RegExp kStringPattern = RegExp(r'"(.*)"');
 
   bool _scanString() {
     // TODO this can be faster
@@ -149,7 +149,7 @@ class Scanner {
     return false;
   }
 
-  static final kIdentifierPattern = RegExp(r'[a-zA-Z0-9_-]+');
+  static final RegExp kIdentifierPattern = RegExp(r'[a-zA-Z0-9_-]+');
 
   bool _scanIdentifier() {
     // TODO this can be faster

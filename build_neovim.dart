@@ -9,7 +9,7 @@ Future<void> main() async {
 
   await utils.stream(
     <String>['make'],
-    env: {'CMAKE_BUILD_TYPE': 'RelWithDebInfo'},
+    env: <String, String>{'CMAKE_BUILD_TYPE': 'RelWithDebInfo'},
     workingDirectory: neovimPath,
   );
 

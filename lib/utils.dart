@@ -46,7 +46,6 @@ io.Directory get repoRoot {
 ///
 /// Will throw an [Exception] if the path does not exist.
 void checkPath(String path) {
-  print('checking the existence of $path...');
   final io.FileSystemEntityType type = io.FileSystemEntity.typeSync(path);
   final io.FileSystemEntity entity;
   if (type == io.FileSystemEntityType.file) {
