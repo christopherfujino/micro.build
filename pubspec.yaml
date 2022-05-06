@@ -1,5 +1,7 @@
 name: micro_build
 environment:
   sdk: '>=2.17.0 <3.0.0'
+dependencies:
+  args: any
 dev_dependencies:
   test: any

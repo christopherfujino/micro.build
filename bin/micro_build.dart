@@ -1,44 +1,14 @@
-import 'dart:io' as io;
+import 'package:args/command_runner.dart';
 
-import 'package:micro_build/interpreter.dart';
-import 'package:micro_build/parser.dart';
-import 'package:micro_build/scanner.dart';
-import 'package:micro_build/source_code.dart';
+import 'package:micro_build/build.dart';
 
 Future<void> main(List<String> args) async {
-  if (args.length != 1) {
-    throw Exception('yolo!');
-  }
+  final CommandRunner<void> runner = CommandRunner<void>(
+    'micro_build',
+    'A small build system for large repositories.',
+    usageLineLength: 80,
+  );
 
-  final String path = args.first;
-  final io.File sourceFile = io.File(path);
-  final io.Directory workingDir = sourceFile.parent;
-  final InterpreterEnv env = InterpreterEnv(workingDir: workingDir);
-
-  final SourceCode source = SourceCode(await sourceFile.readAsString());
-
-  final List<Token> tokenList = await Scanner.fromSourceCode(source).scan();
-
-  final Config config = await _parse(source, tokenList);
-
-  await Interpreter(
-    config: config,
-    env: env,
-  ).interpret('main'); // TODO parse args
-}
-
-Future<Config> _parse(SourceCode source, List<Token> tokenList) async {
-  try {
-    final Config config = await Parser(
-      source: source,
-      tokenList: tokenList,
-    ).parse();
-    return config;
-  } on ParseError catch (err, trace) {
-    // catch so we can better format error message
-    io.stderr.writeln('ParseError!\n');
-    io.stderr.writeln(trace);
-    io.stderr.writeln(err.message);
-    io.exit(1);
-  }
+  runner.addCommand(BuildCommand());
+  await runner.run(args);
 }
