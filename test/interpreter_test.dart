@@ -23,7 +23,9 @@ Future<void> main() async {
       <String>['init'],
       workingDirectory: tempDir.absolute.path,
     );
-    final SourceCode sourceCode = SourceCode(await io.File('test/build_files/git_submodule_init.build').readAsString());
+    final SourceCode sourceCode = SourceCode(
+        await io.File('test/build_files/git_submodule_init.build')
+            .readAsString());
     final List<Token> tokenList =
         await Scanner.fromSourceCode(sourceCode).scan();
     final Config config =
@@ -35,7 +37,8 @@ Future<void> main() async {
   });
 
   test('can scan, parse and interpret test.build', () async {
-    final SourceCode sourceCode = SourceCode(await io.File('test/build_files/test.build').readAsString());
+    final SourceCode sourceCode =
+        SourceCode(await io.File('test/build_files/test.build').readAsString());
     final List<Token> tokenList =
         await Scanner.fromSourceCode(sourceCode).scan();
     final Config config =
