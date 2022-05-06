@@ -9,8 +9,23 @@ import 'package:test/test.dart';
 import 'common.dart';
 
 Future<void> main() async {
+  late final io.Directory tempDir;
+
+  setUpAll(() async {
+    tempDir = await io.Directory.systemTemp.createTemp('interpreter_test');
+    await io.Process.run(
+      'git', <String>['init'],
+      workingDirectory: tempDir.absolute.path,
+    );
+  });
+
+  tearDownAll(() async {
+    await tempDir.delete(recursive: true);
+  });
+
   for (final io.File buildFile in await buildFiles) {
     late final SourceCode sourceCode;
+
     setUpAll(() async {
       sourceCode = SourceCode(await buildFile.readAsString());
     });
@@ -20,7 +35,10 @@ Future<void> main() async {
           await Scanner.fromSourceCode(sourceCode).scan();
       final Config config =
           await Parser(tokenList: tokenList, source: sourceCode).parse();
-      await Interpreter(config).interpret('main');
+      await Interpreter(
+        config: config,
+        env: InterpreterEnv(workingDir: tempDir),
+      ).interpret('main');
     });
   }
 
@@ -36,7 +54,10 @@ target main() {
     final Config config =
         await Parser(tokenList: tokenList, source: sourceCode).parse();
     await expectLater(
-      () => Interpreter(config).interpret('non-main'),
+      () => Interpreter(
+        config: config,
+        env: InterpreterEnv(workingDir: tempDir),
+      ).interpret('non-main'),
       throwsA(
         isA<RuntimeError>().having(
           (RuntimeError error) => error.message,

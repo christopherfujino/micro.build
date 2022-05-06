@@ -6,7 +6,7 @@ late final Future<List<io.File>> buildFiles = (() async {
   }
   final List<io.File> buildFiles = <io.File>[];
   // package:test requires working directory to be project root
-  await io.Directory('./test/build_files')
+  await io.Directory('test/build_files')
       .absolute
       .list()
       .forEach((io.FileSystemEntity entity) {

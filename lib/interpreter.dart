@@ -2,73 +2,10 @@ import 'dart:io' as io;
 
 import 'parser.dart';
 
-abstract class ExtFuncDecl extends FunctionDecl {
-  const ExtFuncDecl({
-    required super.name,
-  }) : super(statements: const <Stmt>[]);
-
-  Future<Object?> _interpret(
-    List<Expr> argExpressions,
-    Interpreter interpreter,
-  );
-}
-
-class RunFuncDecl extends ExtFuncDecl {
-  const RunFuncDecl() : super(name: 'run');
-
-  @override
-  Future<Object?> _interpret(
-    List<Expr> argExpressions,
-    Interpreter interpreter,
-  ) async {
-    final List<String> args = <String>[];
-
-    for (final Expr argExpr in argExpressions) {
-      final Object? value = await interpreter._expr(argExpr);
-      if (value is! String) {
-        _throwRuntimeError(
-          'Expected an arg of type String, got ${value.runtimeType}',
-        );
-      }
-      args.add(value);
-    }
-    final String command = args.first;
-    return _runProcess(command);
-  }
-}
-
-class SequenceFuncDecl extends ExtFuncDecl {
-  const SequenceFuncDecl() : super(name: 'sequence');
-
-  @override
-  Future<Object?> _interpret(
-    List<Expr> argExpressions,
-    Interpreter interpreter,
-  ) async {
-    if (argExpressions.length != 1) {
-      _throwRuntimeError('Expected one arg, got $argExpressions');
-    }
-    final Object? value = await interpreter._expr(argExpressions.first);
-    if (value is! List<Object?>) {
-      _throwRuntimeError(
-        'Expected an arg of type List, got ${value.runtimeType}',
-      );
-    }
-
-    for (final Object? command in value) {
-      if (command is! String) {
-        _throwRuntimeError('Foo bar');
-      }
-      final int exitCode = await _runProcess(command);
-      if (exitCode != 0) {
-        _throwRuntimeError('Command "$command" exited with non-zero');
-      }
-    }
-    return null;
-  }
-}
-
-Future<int> _runProcess(String command) async {
+Future<int> _runProcess({
+  required String command,
+  required io.Directory workingDir,
+}) async {
   final List<String> commandParts = command.split(' ');
   final String executable = commandParts.first;
   final List<String> rest = commandParts.sublist(1);
@@ -76,14 +13,19 @@ Future<int> _runProcess(String command) async {
     executable,
     rest,
     mode: io.ProcessStartMode.inheritStdio,
+    workingDirectory: workingDir.absolute.path,
   );
   return process.exitCode;
 }
 
 class Interpreter {
-  Interpreter(this.config);
+  Interpreter({
+    required this.config,
+    required this.env,
+  });
 
   final Config config;
+  final InterpreterEnv env;
 
   final Map<String, FunctionDecl> _registeredFunctions =
       <String, FunctionDecl>{};
@@ -163,7 +105,11 @@ class Interpreter {
   Future<Object?> _callExpr(CallExpr expr) async {
     if (_externalFunctions.containsKey(expr.name)) {
       final ExtFuncDecl func = _externalFunctions[expr.name]!;
-      return func._interpret(expr.argList, this);
+      return func._interpret(
+        argExpressions: expr.argList,
+        interpreter: this,
+        env: env,
+      );
     }
 
     final FunctionDecl? func = _registeredFunctions[expr.name];
@@ -189,6 +135,90 @@ class Interpreter {
 
   Future<String> _stringLiteral(StringLiteral expr) async {
     return expr.value;
+  }
+}
+
+class InterpreterEnv {
+  const InterpreterEnv({
+    required this.workingDir,
+  });
+
+  final io.Directory workingDir;
+}
+
+/// An external [FunctionDecl].
+abstract class ExtFuncDecl extends FunctionDecl {
+  const ExtFuncDecl({
+    required super.name,
+  }) : super(statements: const <Stmt>[]);
+
+  Future<Object?> _interpret({
+    required List<Expr> argExpressions,
+    required Interpreter interpreter,
+    required InterpreterEnv env,
+  });
+}
+
+class RunFuncDecl extends ExtFuncDecl {
+  const RunFuncDecl() : super(name: 'run');
+
+  @override
+  Future<Object?> _interpret({
+    required List<Expr> argExpressions,
+    required Interpreter interpreter,
+    required InterpreterEnv env,
+  }) async {
+    final List<String> args = <String>[];
+
+    for (final Expr argExpr in argExpressions) {
+      final Object? value = await interpreter._expr(argExpr);
+      if (value is! String) {
+        _throwRuntimeError(
+          'Expected an arg of type String, got ${value.runtimeType}',
+        );
+      }
+      args.add(value);
+    }
+    final String command = args.first;
+    return _runProcess(
+      command: command,
+      workingDir: env.workingDir,
+    );
+  }
+}
+
+class SequenceFuncDecl extends ExtFuncDecl {
+  const SequenceFuncDecl() : super(name: 'sequence');
+
+  @override
+  Future<Object?> _interpret({
+    required List<Expr> argExpressions,
+    required Interpreter interpreter,
+    required InterpreterEnv env,
+  }) async {
+    if (argExpressions.length != 1) {
+      _throwRuntimeError('Expected one arg, got $argExpressions');
+    }
+    final Object? value = await interpreter._expr(argExpressions.first);
+    if (value is! List<Object?>) {
+      _throwRuntimeError(
+        'Expected an arg of type List, got ${value.runtimeType}',
+      );
+    }
+
+    for (final Object? command in value) {
+      if (command is! String) {
+        _throwRuntimeError('Foo bar');
+      }
+      final int exitCode = await _runProcess(
+        command: command,
+        workingDir: env.workingDir,
+      );
+      if (exitCode != 0) {
+        _throwRuntimeError('Command "$command" exited with non-zero');
+      }
+    }
+    return null;
   }
 }
 
