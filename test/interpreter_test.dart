@@ -6,41 +6,45 @@ import 'package:micro_build/scanner.dart';
 import 'package:micro_build/source_code.dart';
 import 'package:test/test.dart';
 
-import 'common.dart';
-
 Future<void> main() async {
   late final io.Directory tempDir;
 
   setUpAll(() async {
     tempDir = await io.Directory.systemTemp.createTemp('interpreter_test');
-    await io.Process.run(
-      'git', <String>['init'],
-      workingDirectory: tempDir.absolute.path,
-    );
   });
 
   tearDownAll(() async {
     await tempDir.delete(recursive: true);
   });
 
-  for (final io.File buildFile in await buildFiles) {
-    late final SourceCode sourceCode;
+  test('can scan, parse and interpret git_submodule_init.build', () async {
+    await io.Process.run(
+      'git',
+      <String>['init'],
+      workingDirectory: tempDir.absolute.path,
+    );
+    final SourceCode sourceCode = SourceCode(await io.File('test/build_files/git_submodule_init.build').readAsString());
+    final List<Token> tokenList =
+        await Scanner.fromSourceCode(sourceCode).scan();
+    final Config config =
+        await Parser(tokenList: tokenList, source: sourceCode).parse();
+    await Interpreter(
+      config: config,
+      env: InterpreterEnv(workingDir: tempDir),
+    ).interpret('main');
+  });
 
-    setUpAll(() async {
-      sourceCode = SourceCode(await buildFile.readAsString());
-    });
-
-    test('can scan, parse and interpret ${buildFile.path}', () async {
-      final List<Token> tokenList =
-          await Scanner.fromSourceCode(sourceCode).scan();
-      final Config config =
-          await Parser(tokenList: tokenList, source: sourceCode).parse();
-      await Interpreter(
-        config: config,
-        env: InterpreterEnv(workingDir: tempDir),
-      ).interpret('main');
-    });
-  }
+  test('can scan, parse and interpret test.build', () async {
+    final SourceCode sourceCode = SourceCode(await io.File('test/build_files/test.build').readAsString());
+    final List<Token> tokenList =
+        await Scanner.fromSourceCode(sourceCode).scan();
+    final Config config =
+        await Parser(tokenList: tokenList, source: sourceCode).parse();
+    await Interpreter(
+      config: config,
+      env: InterpreterEnv(workingDir: tempDir),
+    ).interpret('main');
+  });
 
   test('RuntimeError if told to interpret target that does not exist',
       () async {

@@ -1,0 +1,3 @@
+target main() {
+  run("dart test --reporter=expanded --concurrency=1");
+}
