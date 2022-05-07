@@ -23,6 +23,7 @@ enum TokenType {
   // misc
   comma,
   semicolon,
+  hash, // #
 }
 
 class Token {
@@ -276,6 +277,13 @@ class Scanner {
             char: _char,
           ),
         );
+        return true;
+      case '#':
+        // eat all text until end of line
+        while (source[_index] != '\n') {
+          _index += 1;
+        }
+        // does the parser need a comment token?
         return true;
     }
 
