@@ -63,7 +63,7 @@ class Parser {
     final StringToken name = _consume(TokenType.identifier) as StringToken;
 
     _consume(TokenType.openParen);
-    final List<Expr> deps = _argList();
+    final List<IdentifierRef> deps = _paramList();
     _consume(TokenType.closeParen);
     _consume(TokenType.openCurlyBracket);
     final List<Stmt> statements = <Stmt>[];
@@ -117,7 +117,7 @@ class Parser {
   /// An identifier reference.
   ///
   /// Either a variable or target.
-  Expr _identifierExpr() {
+  IdentifierRef _identifierExpr() {
     final StringToken token = _consume(TokenType.identifier) as StringToken;
     return IdentifierRef(token.value);
   }
@@ -154,6 +154,22 @@ class Parser {
       name.value,
       argList ?? const <Expr>[],
     );
+  }
+
+  /// Parses identifiers (comma delimited) until a [TokenType.closeParen] is
+  /// reached (but not consumed).
+  List<IdentifierRef> _paramList() {
+    final List<IdentifierRef> list = <IdentifierRef>[];
+    while (_currentToken?.type != TokenType.closeParen) {
+      list.add(_identifierExpr());
+      if (_currentToken?.type == TokenType.closeParen) {
+        break;
+      }
+      // else this should be a comma
+      _consume(TokenType.comma);
+    }
+
+    return list;
   }
 
   /// Parses expressions (comma delimited) until a [TokenType.closeParen] is
@@ -230,7 +246,7 @@ class TargetDecl extends Decl {
   });
 
   final Iterable<Stmt> statements;
-  final Iterable<Expr> deps;
+  final Iterable<IdentifierRef> deps;
 }
 
 class FunctionDecl extends Decl {

@@ -25,8 +25,6 @@ class Interpreter {
     'sequence': SequenceFuncDecl(),
   };
 
-  final Map<String, TargetDecl> _registeredTargets = <String, TargetDecl>{};
-
   //visibleForOverriding
   void stdoutPrint(String msg) {
     io.stdout.writeln(msg);
@@ -37,22 +35,27 @@ class Interpreter {
     io.stderr.writeln(msg);
   }
 
-  // This is a function in case scopes need to be handled later.
-  TargetDecl? _targetLookup(String? name) => _targetBindings[name];
-
   Future<void> interpret(String targetName) async {
     // Register declarations
     _registerDeclarations();
 
     // interpret target
-    await _target(targetName);
+    await _interpretTarget(targetName, <String>{});
   }
 
-  Future<void> _target(String name) async {
+  Future<void> _interpretTarget(String name, Set<String> visitedTargets) async {
+    visitedTargets.add(name);
+
     // Determine target to run from [targetName]
-    final TargetDecl? target = _registeredTargets[name];
+    final TargetDecl? target = _targetBindings[name];
     if (target == null) {
       _throwRuntimeError('There is no defined target named $name');
+    }
+
+    for (final IdentifierRef dep in target.deps) {
+      if (!visitedTargets.contains(dep.name)) {
+        await _interpretTarget(dep.name, visitedTargets);
+      }
     }
 
     for (final Stmt stmt in target.statements) {
@@ -75,10 +78,10 @@ class Interpreter {
     for (final Decl decl in config.declarations) {
       if (decl is TargetDecl) {
         // TODO should check globally for any identifier with this name
-        if (_registeredTargets.containsKey(decl.name)) {
+        if (_targetBindings.containsKey(decl.name)) {
           _throwRuntimeError('Duplicate target named ${decl.name}');
         }
-        _registeredTargets[decl.name] = decl;
+        _targetBindings[decl.name] = decl;
       } else {
         _throwRuntimeError('Unknown declaration type ${decl.runtimeType}');
       }
