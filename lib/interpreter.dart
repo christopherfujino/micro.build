@@ -84,7 +84,7 @@ class Interpreter {
     await _expr(statement.expression);
   }
 
-  Future<Object?> _expr(Expr expr) async {
+  Future<Object?> _expr(Expr expr) {
     if (expr is CallExpr) {
       return _callExpr(expr);
     }
@@ -102,7 +102,7 @@ class Interpreter {
   Future<Object?> _callExpr(CallExpr expr) async {
     if (_externalFunctions.containsKey(expr.name)) {
       final ExtFuncDecl func = _externalFunctions[expr.name]!;
-      return func._interpret(
+      return func.interpret(
         argExpressions: expr.argList,
         interpreter: this,
         env: env,
@@ -130,8 +130,8 @@ class Interpreter {
     return elements;
   }
 
-  Future<String> _stringLiteral(StringLiteral expr) async {
-    return expr.value;
+  Future<String> _stringLiteral(StringLiteral expr) {
+    return Future<String>.value(expr.value);
   }
 
   Future<int> runProcess({
@@ -176,7 +176,7 @@ abstract class ExtFuncDecl extends FunctionDecl {
     required super.name,
   }) : super(statements: const <Stmt>[]);
 
-  Future<Object?> _interpret({
+  Future<Object?> interpret({
     required List<Expr> argExpressions,
     required Interpreter interpreter,
     required InterpreterEnv env,
@@ -187,7 +187,7 @@ class RunFuncDecl extends ExtFuncDecl {
   const RunFuncDecl() : super(name: 'run');
 
   @override
-  Future<Object?> _interpret({
+  Future<Object?> interpret({
     required List<Expr> argExpressions,
     required Interpreter interpreter,
     required InterpreterEnv env,
@@ -215,7 +215,7 @@ class SequenceFuncDecl extends ExtFuncDecl {
   const SequenceFuncDecl() : super(name: 'sequence');
 
   @override
-  Future<Object?> _interpret({
+  Future<Object?> interpret({
     required List<Expr> argExpressions,
     required Interpreter interpreter,
     required InterpreterEnv env,

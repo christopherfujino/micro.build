@@ -53,6 +53,21 @@ Future<void> main() async {
     expect(interpreter.stdoutBuffer.toString(), contains('hello world'));
   });
 
+  test('comments are skipped', () async {
+    final SourceCode sourceCode =
+        SourceCode(await io.File('test/build_files/comments.build').readAsString());
+    final List<Token> tokenList =
+        await Scanner.fromSourceCode(sourceCode).scan();
+    final Config config =
+        await Parser(tokenList: tokenList, source: sourceCode).parse();
+    final TestInterpreter interpreter = TestInterpreter(
+      config: config,
+      env: InterpreterEnv(workingDir: tempDir),
+    );
+    await interpreter.interpret('main');
+    expect(interpreter.stdoutBuffer.toString().trim(), isEmpty);
+  });
+
   test('RuntimeError if told to interpret target that does not exist',
       () async {
     final SourceCode sourceCode = SourceCode('''
