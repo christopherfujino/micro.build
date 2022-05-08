@@ -1,7 +1,6 @@
-target main() {
-}
+target main(test, analyze) {}
 
-target test() {
+target test(packages) {
   run("dart test --reporter=expanded --concurrency=1");
 }
 
@@ -9,6 +8,6 @@ target packages() {
   run("dart pub get");
 }
 
-target analyze() {
-  run("dart analyze .");
+target analyze(packages) {
+  run("dart analyze . --fatal-warnings --fatal-infos");
 }

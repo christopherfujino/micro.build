@@ -218,7 +218,7 @@ class RunFuncDecl extends ExtFuncDecl {
       workingDir: env.workingDir,
     );
     if (exitCode != 0) {
-      _throwRuntimeError('"${args.join(' ')} exited with code $exitCode"');
+      _throwRuntimeError('"${args.join(' ')}" exited with code $exitCode');
     }
   }
 }

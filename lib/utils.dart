@@ -14,7 +14,7 @@ Future<void> stream(
       ' with env $env',
     '...',
   ].join();
-  print(message);
+  print(message); // ignore: avoid_print
   final io.Process process = await io.Process.start(
     command.first,
     command.skip(1).toList(),
