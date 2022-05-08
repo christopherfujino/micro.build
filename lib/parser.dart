@@ -51,7 +51,7 @@ class Parser {
   Never _throwParseError(Token token, String message) {
     throw ParseError(
       '\n${source.getDebugMessage(token.line, token.char)}\n'
-      'Parse error: $message [${token.line}, ${token.char}]\n',
+      'Parse error: $token - $message\n',
     );
   }
 
@@ -106,7 +106,20 @@ class Parser {
     if (_currentToken!.type == TokenType.openSquareBracket) {
       return _listLiteral();
     }
-    _throwParseError(_currentToken!, 'Tried but failed to parse an expression');
+
+    // This should be last
+    if (_currentToken!.type == TokenType.identifier) {
+      return _identifierExpr();
+    }
+    _throwParseError(_currentToken!, 'Unimplemented expression type');
+  }
+
+  /// An identifier reference.
+  ///
+  /// Either a variable or target.
+  Expr _identifierExpr() {
+    final StringToken token = _consume(TokenType.identifier) as StringToken;
+    return IdentifierRef(token.value);
   }
 
   ListLiteral _listLiteral() {
@@ -166,7 +179,7 @@ class Parser {
 
   /// Consume and return the next token iff it matches [type].
   ///
-  /// Throws [Exception] if the type is not correct.
+  /// Throws [ParseError] if the type is not correct.
   Token _consume(TokenType type) {
     // coerce type as this should only be called if you know what's there.
     final Token consumedToken = _currentToken!;
@@ -241,29 +254,37 @@ abstract class FunctionExitStmt extends Stmt {
 }
 
 class BareStmt extends Stmt {
-  BareStmt({required this.expression});
+  const BareStmt({required this.expression});
 
   final Expr expression;
 }
 
-abstract class Expr {}
+abstract class Expr {
+  const Expr();
+}
 
 class CallExpr extends Expr {
-  CallExpr(this.name, this.argList);
+  const CallExpr(this.name, this.argList);
 
   final String name;
 
-  List<Expr> argList;
+  final List<Expr> argList;
+}
+
+class IdentifierRef extends Expr {
+  const IdentifierRef(this.name);
+
+  final String name;
 }
 
 class StringLiteral extends Expr {
-  StringLiteral(this.value);
+  const StringLiteral(this.value);
 
   final String value;
 }
 
 class ListLiteral extends Expr {
-  ListLiteral(this.elements);
+  const ListLiteral(this.elements);
 
   final List<Expr> elements;
 }

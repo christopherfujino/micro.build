@@ -12,8 +12,7 @@ class SourceCode {
   String getDebugMessage(int lineNum, int charNum) {
     final StringBuffer buffer = StringBuffer();
     buffer.writeln(_lines[lineNum - 1]);
-    final int padding = charNum == 1 ? 0 : charNum - 2;
-    buffer.write(' ' * (padding - 1));
+    buffer.write(' ' * (charNum - 1));
     buffer.writeln('^');
     return buffer.toString();
   }

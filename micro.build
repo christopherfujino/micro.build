@@ -8,3 +8,7 @@ target test() {
 target packages() {
   run("dart pub get");
 }
+
+target analyze() {
+  run("dart analyze .");
+}

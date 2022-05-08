@@ -1,0 +1,11 @@
+target main(compile, test) {
+  run("echo main");
+}
+
+target compile() {
+  run("echo compile");
+}
+
+target test(compile) {
+  run("echo test");
+}

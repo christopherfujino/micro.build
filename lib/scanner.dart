@@ -38,7 +38,7 @@ class Token {
   final int char;
 
   @override
-  String toString() => type.name;
+  String toString() => '[$line, $char] ${type.name}';
 }
 
 class StringToken extends Token {
@@ -51,6 +51,9 @@ class StringToken extends Token {
 
   /// The contents of this string, excluding quotes.
   final String value;
+
+  @override
+  String toString() => '${super.toString()}: "$value"';
 }
 
 class Scanner {

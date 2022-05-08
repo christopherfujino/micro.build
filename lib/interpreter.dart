@@ -14,8 +14,10 @@ class Interpreter {
   final Config config;
   final InterpreterEnv env;
 
-  final Map<String, FunctionDecl> _registeredFunctions =
+  final Map<String, FunctionDecl> _functionBindings =
       <String, FunctionDecl>{};
+
+  final Map<String, TargetDecl> _targetBindings = <String, TargetDecl>{};
 
   static const Map<String, ExtFuncDecl> _externalFunctions =
       <String, ExtFuncDecl>{
@@ -34,6 +36,9 @@ class Interpreter {
   void stderrPrint(String msg) {
     io.stderr.writeln(msg);
   }
+
+  // This is a function in case scopes need to be handled later.
+  TargetDecl? _targetLookup(String? name) => _targetBindings[name];
 
   Future<void> interpret(String targetName) async {
     // Register declarations
@@ -102,14 +107,15 @@ class Interpreter {
   Future<Object?> _callExpr(CallExpr expr) async {
     if (_externalFunctions.containsKey(expr.name)) {
       final ExtFuncDecl func = _externalFunctions[expr.name]!;
-      return func.interpret(
+      await func.interpret(
         argExpressions: expr.argList,
         interpreter: this,
         env: env,
       );
+      return null;
     }
 
-    final FunctionDecl? func = _registeredFunctions[expr.name];
+    final FunctionDecl? func = _functionBindings[expr.name];
     if (func == null) {
       _throwRuntimeError('Tried to call undeclared function ${expr.name}');
     }
@@ -176,7 +182,7 @@ abstract class ExtFuncDecl extends FunctionDecl {
     required super.name,
   }) : super(statements: const <Stmt>[]);
 
-  Future<Object?> interpret({
+  Future<void> interpret({
     required List<Expr> argExpressions,
     required Interpreter interpreter,
     required InterpreterEnv env,
@@ -187,7 +193,7 @@ class RunFuncDecl extends ExtFuncDecl {
   const RunFuncDecl() : super(name: 'run');
 
   @override
-  Future<Object?> interpret({
+  Future<void> interpret({
     required List<Expr> argExpressions,
     required Interpreter interpreter,
     required InterpreterEnv env,
@@ -204,10 +210,13 @@ class RunFuncDecl extends ExtFuncDecl {
       args.add(value);
     }
     final String command = args.first;
-    return interpreter.runProcess(
+    final int exitCode = await interpreter.runProcess(
       command: command,
       workingDir: env.workingDir,
     );
+    if (exitCode != 0) {
+      _throwRuntimeError('"${args.join(' ')} exited with code $exitCode"');
+    }
   }
 }
 
@@ -215,7 +224,7 @@ class SequenceFuncDecl extends ExtFuncDecl {
   const SequenceFuncDecl() : super(name: 'sequence');
 
   @override
-  Future<Object?> interpret({
+  Future<void> interpret({
     required List<Expr> argExpressions,
     required Interpreter interpreter,
     required InterpreterEnv env,
@@ -242,7 +251,6 @@ class SequenceFuncDecl extends ExtFuncDecl {
         _throwRuntimeError('Command "$command" exited with non-zero');
       }
     }
-    return null;
   }
 }
 

@@ -54,8 +54,8 @@ Future<void> main() async {
   });
 
   test('comments are skipped', () async {
-    final SourceCode sourceCode =
-        SourceCode(await io.File('test/build_files/comments.build').readAsString());
+    final SourceCode sourceCode = SourceCode(
+        await io.File('test/build_files/comments.build').readAsString());
     final List<Token> tokenList =
         await Scanner.fromSourceCode(sourceCode).scan();
     final Config config =
@@ -66,6 +66,27 @@ Future<void> main() async {
     );
     await interpreter.interpret('main');
     expect(interpreter.stdoutBuffer.toString().trim(), isEmpty);
+  });
+
+  test('interprets dependencies', () async {
+    final SourceCode sourceCode = SourceCode(
+        await io.File('test/build_files/dependencies.build').readAsString());
+    final List<Token> tokenList =
+        await Scanner.fromSourceCode(sourceCode).scan();
+    final Config config =
+        await Parser(tokenList: tokenList, source: sourceCode).parse();
+    final TestInterpreter interpreter = TestInterpreter(
+      config: config,
+      env: InterpreterEnv(workingDir: tempDir),
+    );
+    await interpreter.interpret('main');
+    expect(
+      interpreter.stdoutBuffer.toString().trim(),
+      '''
+compile
+test
+main''',
+    );
   });
 
   test('RuntimeError if told to interpret target that does not exist',
