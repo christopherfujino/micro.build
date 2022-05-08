@@ -53,41 +53,51 @@ target submodules() {
 
 ## MBScript
 
+### Keywords
+
+Keyword | Description | Implemented?
+--- | --- | ---
+`target` | A build target. Without additional arguments, Microbuild defaults to executing a `main` target. | - [x]
+`var` | A mutable variable | - [ ]
+`const` | An immutable variable (attempting to modify a `const` `Map` is a runtime error) | - [ ]
+`with` | Creates a context block, in which `$cwd` or `$env` is modified | - [ ]
+
 ### Primitives
 
 Type | Example | Description | Implemented?
 --- | --- | --- | ---
-String | `"Hello, world!"` | ASCII, immutable string | [x]
-Number | `12.3` | Floating point number (currently 32-bit) | [ ]
-null | `null` | null literal | [ ]
+String | `"Hello, world!"` | ASCII, immutable string | - [x]
+Number | `12.3` | Floating point number (currently 32-bit) | - [ ]
+`bool` | `var shouldUpdate = false;` | Either `true` or `false` | - [ ]
+null | `null` | null literal | - [ ]
 
 ### Composite Types
 
 Type | Example | Description | Implemented?
 --- | --- | --- | ---
-List | `[1, "b", null]` | An untyped, growable list of objects | [ ]
-Map | `{"age": 36}` | Hash map from `String` to any object. Using a non-string as a key will trigger an implicit cast. Attempting to get a value from an unset key will return `null`. | [ ]
+List | `[1, "b", null]` | An untyped, growable list of objects | - [ ]
+Map | `{"age": 36}` | Hash map from `String` to any object. Using a non-string as a key will trigger an implicit cast. Attempting to get a value from an unset key will return `null`. | - [ ]
 
 ### Control Flow
 
 Keyword | Example | Implemented?
 --- | --- | ---
-`if` | `if check() {}` | [ ]
-`for` & `in` | `for file in getFiles() {}` | [ ]
+`if` | `if check() {}` | - [ ]
+`for` & `in` | `for file in getFiles() {}` | - [ ]
 
 ### Functions
 
 Function Name | Description | Implemented?
 --- | --- | ---
-`run(String)` | Run a subprocess. Does not support paths or arguments with spaces | [x]
-`run(List)` | Run a subprocess with support for spaces | [ ]
+`run(String)` | Run a subprocess. Does not support paths or arguments with spaces | - [x]
+`run(List)` | Run a subprocess with support for spaces | - [ ]
 
 ### Variables
 
 Constant Name | Description | Implemented?
 --- | --- | ---
-`$cwd` | By default, a target's working directory will be the location of the build file it is defined in. This can be temporarily modified with the `with` keyword. | [ ]
-`$env` | A `Map` of environment variables when Monobuild started | [ ]
+`$cwd` | By default, a target's working directory will be the location of the build file it is defined in. This can be temporarily modified with the `with` keyword. | - [ ]
+`$env` | A `Map` of environment variables when Monobuild started | - [ ]
 
 ## Dependencies
 
