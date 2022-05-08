@@ -6,6 +6,8 @@ import 'package:micro_build/scanner.dart';
 import 'package:micro_build/source_code.dart';
 import 'package:test/test.dart';
 
+import 'common.dart';
+
 Future<void> main() async {
   late final io.Directory tempDir;
 
@@ -30,7 +32,7 @@ Future<void> main() async {
         await Scanner.fromSourceCode(sourceCode).scan();
     final Config config =
         await Parser(tokenList: tokenList, source: sourceCode).parse();
-    await Interpreter(
+    await TestInterpreter(
       config: config,
       env: InterpreterEnv(workingDir: tempDir),
     ).interpret('main');
@@ -43,7 +45,7 @@ Future<void> main() async {
         await Scanner.fromSourceCode(sourceCode).scan();
     final Config config =
         await Parser(tokenList: tokenList, source: sourceCode).parse();
-    await Interpreter(
+    await TestInterpreter(
       config: config,
       env: InterpreterEnv(workingDir: tempDir),
     ).interpret('main');
@@ -61,7 +63,7 @@ target main() {
     final Config config =
         await Parser(tokenList: tokenList, source: sourceCode).parse();
     await expectLater(
-      () => Interpreter(
+      () => TestInterpreter(
         config: config,
         env: InterpreterEnv(workingDir: tempDir),
       ).interpret('non-main'),

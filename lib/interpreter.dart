@@ -1,22 +1,9 @@
+import 'dart:convert';
 import 'dart:io' as io;
 
 import 'parser.dart';
 
-Future<int> _runProcess({
-  required String command,
-  required io.Directory workingDir,
-}) async {
-  final List<String> commandParts = command.split(' ');
-  final String executable = commandParts.first;
-  final List<String> rest = commandParts.sublist(1);
-  final io.Process process = await io.Process.start(
-    executable,
-    rest,
-    mode: io.ProcessStartMode.inheritStdio,
-    workingDirectory: workingDir.absolute.path,
-  );
-  return process.exitCode;
-}
+typedef Printer = void Function(String);
 
 class Interpreter {
   Interpreter({
@@ -37,6 +24,16 @@ class Interpreter {
   };
 
   final Map<String, TargetDecl> _registeredTargets = <String, TargetDecl>{};
+
+  //visibleForOverriding
+  void stdoutPrint(String msg) {
+    io.stdout.writeln(msg);
+  }
+
+  //visibleForOverriding
+  void stderrPrint(String msg) {
+    io.stderr.writeln(msg);
+  }
 
   Future<void> interpret(String targetName) async {
     // Register declarations
@@ -136,6 +133,33 @@ class Interpreter {
   Future<String> _stringLiteral(StringLiteral expr) async {
     return expr.value;
   }
+
+  Future<int> runProcess({
+    required String command,
+    required io.Directory workingDir,
+  }) async {
+    final List<String> commandParts = command.split(' ');
+    final String executable = commandParts.first;
+    final List<String> rest = commandParts.sublist(1);
+    final io.Process process = await io.Process.start(
+      executable,
+      rest,
+      workingDirectory: workingDir.absolute.path,
+    );
+    process.stdout
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .listen((String line) {
+      stdoutPrint(line);
+    });
+    process.stderr
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .listen((String line) {
+      stderrPrint(line);
+    });
+    return process.exitCode;
+  }
 }
 
 class InterpreterEnv {
@@ -180,7 +204,7 @@ class RunFuncDecl extends ExtFuncDecl {
       args.add(value);
     }
     final String command = args.first;
-    return _runProcess(
+    return interpreter.runProcess(
       command: command,
       workingDir: env.workingDir,
     );
@@ -210,7 +234,7 @@ class SequenceFuncDecl extends ExtFuncDecl {
       if (command is! String) {
         _throwRuntimeError('Foo bar');
       }
-      final int exitCode = await _runProcess(
+      final int exitCode = await interpreter.runProcess(
         command: command,
         workingDir: env.workingDir,
       );

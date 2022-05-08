@@ -1,5 +1,7 @@
 import 'dart:io' as io;
 
+import 'package:micro_build/interpreter.dart';
+
 final Future<List<io.File>> buildFiles = (() async {
   if (io.Platform.isWindows) {
     throw UnimplementedError('hard-coded posix paths');
@@ -17,3 +19,22 @@ final Future<List<io.File>> buildFiles = (() async {
 
   return buildFiles;
 })();
+
+class TestInterpreter extends Interpreter {
+  TestInterpreter({
+    required super.config,
+    required super.env,
+  });
+
+  final StringBuffer stdoutBuffer = StringBuffer();
+  @override
+  void stdoutPrint(String msg) {
+    stdoutBuffer.writeln(msg);
+  }
+
+  final StringBuffer stderrBuffer = StringBuffer();
+  @override
+  void stderrPrint(String msg) {
+    stderrBuffer.writeln(msg);
+  }
+}
