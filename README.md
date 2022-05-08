@@ -9,8 +9,8 @@ target main(frontend, backend) {
   run("python tool/integration_test.py");
 }
 
-target frontend(submodules) {
-  with ({workingDir: "./site"}) {
+with ({workingDir: "./site"}) {
+  target frontend(submodules) {
     # Leverage JS tooling
     run("npm install");
     run("run run analyze");
@@ -19,8 +19,8 @@ target frontend(submodules) {
   }
 }
 
-target backend(submodules) {
-  with ({workingDir: "./server"}) {
+with ({workingDir: "./server"}) {
+  target backend(submodules) {
     # Leverage Go tooling
     run("go get");
     run("go vet");
