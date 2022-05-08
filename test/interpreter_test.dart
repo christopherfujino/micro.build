@@ -65,7 +65,7 @@ Future<void> main() async {
       env: InterpreterEnv(workingDir: tempDir),
     );
     await interpreter.interpret('main');
-    expect(interpreter.stdoutBuffer.toString().trim(), isEmpty);
+    expect(interpreter.stdoutBuffer.toString().trim(), isNot(contains('hello world')));
   });
 
   test('interprets dependencies', () async {
@@ -81,11 +81,12 @@ Future<void> main() async {
     );
     await interpreter.interpret('main');
     expect(
-      interpreter.stdoutBuffer.toString().trim(),
-      '''
-compile
-test
-main''',
+      interpreter.stdoutBuffer.toString().split('\n'),
+      containsAllInOrder(<String>[
+        'compile',
+        'test',
+        'main',
+      ]),
     );
   });
 

@@ -45,7 +45,6 @@ class Interpreter {
 
   Future<void> _interpretTarget(String name, Set<String> visitedTargets) async {
     visitedTargets.add(name);
-
     // Determine target to run from [targetName]
     final TargetDecl? target = _targetBindings[name];
     if (target == null) {
@@ -57,6 +56,8 @@ class Interpreter {
         await _interpretTarget(dep.name, visitedTargets);
       }
     }
+
+    stdoutPrint('\nExecuting target "$name"...\n');
 
     for (final Stmt stmt in target.statements) {
       await _stmt(stmt);

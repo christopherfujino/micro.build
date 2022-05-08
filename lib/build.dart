@@ -37,6 +37,12 @@ class BuildCommand extends Command<void> {
     ].join(io.Platform.pathSeparator));
     final InterpreterEnv env = InterpreterEnv(workingDir: workingDir);
 
+    if (!sourceFile.existsSync()) {
+      throw RuntimeError(
+        'No build file was specified, and no $kSourceFileName file found in '
+        '${workingDir.path}',
+      );
+    }
     final SourceCode source = SourceCode(await sourceFile.readAsString());
 
     final List<Token> tokenList = await Scanner.fromSourceCode(source).scan();
