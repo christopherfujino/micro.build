@@ -45,10 +45,12 @@ Future<void> main() async {
         await Scanner.fromSourceCode(sourceCode).scan();
     final Config config =
         await Parser(tokenList: tokenList, source: sourceCode).parse();
-    await TestInterpreter(
+    final TestInterpreter interpreter = TestInterpreter(
       config: config,
       env: InterpreterEnv(workingDir: tempDir),
-    ).interpret('main');
+    );
+    await interpreter.interpret('main');
+    expect(interpreter.stdoutBuffer.toString(), contains('hello world'));
   });
 
   test('RuntimeError if told to interpret target that does not exist',
