@@ -148,6 +148,7 @@ class Interpreter {
     required String command,
     required io.Directory workingDir,
   }) async {
+    stdoutPrint('Running command "$command"...');
     final List<String> commandParts = command.split(' ');
     final String executable = commandParts.first;
     final List<String> rest = commandParts.sublist(1);
