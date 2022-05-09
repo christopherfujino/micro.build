@@ -13,11 +13,11 @@ as a lightweight solution for configuring monorepos
 var pythonBinary = "python";
 
 target main(frontend, backend, python) {
-  run("python tool/integration_test.py");
+  run([pythonBinary, "tool/integration_test.py"]);
 }
 
-with ({cwd: "./site"}) { # Unimplemented
-  target frontend(submodules) {
+target frontend(submodules) {
+  with ({"cwd": $cwd + "site"}) { # Unimplemented
     # Leverage JS tooling
     run("npm install");
     run("run run analyze");
@@ -26,8 +26,8 @@ with ({cwd: "./site"}) { # Unimplemented
   }
 }
 
-with ({cwd: "./server"}) {
-  target backend(submodules) {
+target backend(submodules) {
+  with ({"cwd": $cwd + "server"}) {
     # Leverage Go tooling
     run("go get");
     run("go vet");
@@ -43,6 +43,11 @@ target python() {
     return; # Unimplemented
   }
   pythonBinary = "python3";
+  result = runWithErrors([pythonBinary, "--version"]);
+  if (result.exitCode == 0) {
+    return;
+  }
+  fail("Could not resolve python or python3 from the $PATH");
 }
 
 target submodules() {
@@ -70,6 +75,37 @@ dependent targets). If side effects from target A affects the execution of
 target B, target B should declare target A as its dependency.
 
 ### Context Stack
+
+A Monobuild context consists of environment variables (`$env`), the current
+working directory (`$cwd`, by default bound to the directory containing the
+current build file), and various setters and getters to
+[persistent storage](#persistent-storage). See
+[context getters](#context-getters) and [context setters](#context-setters) for
+more information.
+
+During the runtime of a build, a stack of contexts are maintained. New contexts
+are added to the stack when a new target is begun, when a new build file is
+entered (`$cwd` is updated to the containing directory of the build file), or
+when in a `with` block.
+
+```
+target main(dep) {
+  print("foo is " + $env["foo"]); # "foo is "
+}
+
+target dep() {
+  with ({"env": {"foo": "bar"}}) {
+    print("foo is " + $env["foo"]); # "foo is bar"
+  }
+}
+```
+
+### Persistent Storage
+
+While Make by default is stateless and determines whether a target is stale or
+not by comparing the last modified dates of the inputs to that of the output,
+Monobuild is stateful, and requires targets to define arbitrary `$fingerprint`
+strings.
 
 ## MBScript
 
@@ -111,21 +147,28 @@ Keyword | Example | Implemented?
 Function Name | Description | Implemented?
 --- | --- | ---
 `run(String)` | Run a subprocess. Does not support paths or arguments with spaces | [x]
-`run(List)` | Run a subprocess with support for spaces. Each element should be
-either a `String` or a `Path`. | [ ]
+`run(List)` | Run a subprocess with support for spaces. Each element should be either a `String` or a `Path`. | [ ]
+`fail(String)` | Explicitly fail a target with an error message | [ ]
 
 ### Context Getters
 
 Context getters look like variables prefixed with a `$`. However, they are
 evaluated at runtime relative to the current running context.
 
-Constant Name | Description | Implemented?
+Getter Name | Description | Implemented?
 --- | --- | ---
 `$cwd` | A `Path` object representing the current working directory. By default, a target's working directory will be the location of the build file it is defined in. This can be temporarily modified with the `with` keyword. | [ ]
 `$root` | A `Path` object respresenting the current file system's root. Note: this should be used with caution, as encoding `Path`s from root may not work on other machines. | [ ]
-`$env` | A `Map` of environment variables when Monobuild started | [ ]
+`$env` | A `Map` interface that gets environment variables from the [Context Stack](#context-stack) | [ ]
 `$fileState` | A `Map` interface around Microbuild's local key/value database file, scoped to the current file. Note, files are tracked by absolute file system path. If a file's absolute path changes, earlier persistent data will not be accessible. | [ ]
 `$targetState` | A `Map` interface around Microbuild's local key/value database file, scoped to the current target. Note, targets are tracked by target name and absolute file system path. | [ ]
+
+### Context Setters
+
+Setter Name | Description | Implemented?
+--- | --- | ---
+`$fingerprint` | A write-only `String` interface that is persisted to database
+file.
 
 ## Dependencies
 
