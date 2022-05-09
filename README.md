@@ -148,6 +148,8 @@ Function Name | Description | Implemented?
 --- | --- | ---
 `run(String)` | Run a subprocess. Does not support paths or arguments with spaces | [x]
 `run(List)` | Run a subprocess with support for spaces. Each element should be either a `String` or a `Path`. | [ ]
+`print(String)` | Print a `String` to STDOUT | [ ]
+`printError(String)` | Print a `String` to STDERR | [ ]
 `fail(String)` | Explicitly fail a target with an error message | [ ]
 
 ### Context Getters
