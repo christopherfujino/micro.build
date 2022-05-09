@@ -169,8 +169,7 @@ Getter Name | Description | Implemented?
 
 Setter Name | Description | Implemented?
 --- | --- | ---
-`$fingerprint` | A write-only `String` interface that is persisted to database
-file.
+`$fingerprint` | A write-only `String` interface that is persisted to database file.
 
 ## Dependencies
 
@@ -181,13 +180,36 @@ actually a list of named targets that must be up to date before this executes.
 
 ### Make
 
-While Make's simple architecture the primary inspiration for Microbuild, Make
+While Make's simple architecture the primary inspiration for Monobuild, Make
 assumes that target cache invalidation is based on last modified timestamps on
 files. This means doing other kinds of cache invalidation (e.g. hashing file
 contents, running an arbitrary script), while possible, is awkward and requires
 shell scripting and Makefile syntax knowledge.
 
-Microbuild's built-in DSL, MBScript, allows targets to define arbitrary cache
+Monobuild's built-in DSL, MBScript, allows targets to define arbitrary cache
 fingerprints. It also has an expressive, obvious scripting syntax, which should
 be accessible to programmers coming from different languages, unlike Makefile or
 shell.
+
+Monobuild is neither good at nor concerned with compiling your code. Monobuild
+assumes that build targets already know how to build themselves, whether by via
+a generalized build system like Make or CMake, or a language-specific toolchain
+like the `go` tool.
+
+### Bazel
+
+Didn't Google already solve the problem of describing cross-language build
+targets across monorepos with [Bazel](https://bazel.build)?
+
+Sort of. Bazel assumes you will be compiling a large number (hundreds or
+thousands) targets in parallel across multiple remote compute instances, while
+Monobuild aims to manage reproducibly manage monorepo workspaces on a local
+machine.
+
+In addition, Bazel assumes that there will be Bazel build rules for all code in
+your dependency graph. At Google, third party dependency sources are copied
+internally and Bazel build rules maintained alongside. In addition to
+maintaining build rules per project, rules for each programming language
+toolchain must be available. While mainstream languages have
+[support](https://bazel.build/rules), for more esoteric languages you community
+support may be unreliable (or non-existent).
