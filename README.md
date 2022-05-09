@@ -60,6 +60,15 @@ is not explicitly provided via a command-line argument, `'main'` will be
 implicitly executed). Targets specify zero or more target dependencies which are
 recursively validated to be up to date before the current target is executed.
 
+Note: a particular target is guaranteed to run at most once in a build, even if
+it is depended on multiple times and its fingerprint has been invalidated by
+another build (or a target does not provide a fingerprint). This means that if
+one target produces side effects that affect the execution of another target,
+the order targets are executed may matter, although this order is not guaranteed
+to be stable (other than declared dependencies are guaranteed to run before
+dependent targets). If side effects from target A affects the execution of
+target B, target B should declare target A as its dependency.
+
 ### Context Stack
 
 ## MBScript
