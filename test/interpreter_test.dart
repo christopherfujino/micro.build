@@ -51,6 +51,7 @@ Future<void> main() async {
     );
     await interpreter.interpret('main');
     expect(interpreter.stdoutBuffer.toString(), contains('hello world'));
+    expect(interpreter.stdoutBuffer.toString(), contains('yolo dawg'));
   });
 
   test('comments are skipped', () async {
