@@ -191,10 +191,12 @@ class Interpreter {
 
 class Context {
   const Context({
-    required this.workingDir,
+    this.workingDir,
+    this.env,
   });
 
-  final io.Directory workingDir;
+  final io.Directory? workingDir;
+  final Map<String, String>? env;
 }
 
 /// An external [FunctionDecl].
