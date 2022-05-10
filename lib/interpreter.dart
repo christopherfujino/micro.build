@@ -8,11 +8,11 @@ typedef Printer = void Function(String);
 class Interpreter {
   Interpreter({
     required this.config,
-    required this.env,
+    required this.context,
   });
 
   final Config config;
-  final InterpreterEnv env;
+  final Context context;
 
   final Map<String, FunctionDecl> _functionBindings = <String, FunctionDecl>{};
 
@@ -21,6 +21,7 @@ class Interpreter {
   static const Map<String, ExtFuncDecl> _externalFunctions =
       <String, ExtFuncDecl>{
     'run': RunFuncDecl(),
+    'print': PrintFuncDecl(),
   };
 
   //visibleForOverriding
@@ -112,7 +113,7 @@ class Interpreter {
       await func.interpret(
         argExpressions: expr.argList,
         interpreter: this,
-        env: env,
+        context: context,
       );
       return null;
     }
@@ -168,10 +169,28 @@ class Interpreter {
     });
     return process.exitCode;
   }
+
+  String _castExprToString(Expr expr) {
+    switch (expr.runtimeType) {
+      case StringLiteral:
+        return (expr as StringLiteral).value;
+      case ListLiteral:
+        final StringBuffer buffer = StringBuffer('[');
+        buffer.write(
+          (expr as ListLiteral)
+              .elements
+              .map<String>((Expr expr) => _castExprToString(expr))
+              .join(', '),
+        );
+        buffer.write(']');
+        return buffer.toString();
+    }
+    throw UnimplementedError(expr.runtimeType.toString());
+  }
 }
 
-class InterpreterEnv {
-  const InterpreterEnv({
+class Context {
+  const Context({
     required this.workingDir,
   });
 
@@ -187,7 +206,7 @@ abstract class ExtFuncDecl extends FunctionDecl {
   Future<void> interpret({
     required List<Expr> argExpressions,
     required Interpreter interpreter,
-    required InterpreterEnv env,
+    required Context context,
   });
 }
 
@@ -198,8 +217,17 @@ class PrintFuncDecl extends ExtFuncDecl {
   Future<void> interpret({
     required List<Expr> argExpressions,
     required Interpreter interpreter,
-    required InterpreterEnv env,
-  }) async {}
+    required Context context,
+  }) async {
+    if (argExpressions.length != 1) {
+      _throwRuntimeError(
+        'Function run() expected one arg, got $argExpressions',
+      );
+    }
+    interpreter.stdoutPrint(
+      interpreter._castExprToString(argExpressions.first),
+    );
+  }
 }
 
 class RunFuncDecl extends ExtFuncDecl {
@@ -209,11 +237,12 @@ class RunFuncDecl extends ExtFuncDecl {
   Future<void> interpret({
     required List<Expr> argExpressions,
     required Interpreter interpreter,
-    required InterpreterEnv env,
+    required Context context,
   }) async {
     if (argExpressions.length != 1) {
       _throwRuntimeError(
-          'Function run() expected one arg, got $argExpressions');
+        'Function run() expected one arg, got $argExpressions',
+      );
     }
 
     final Object? value = await interpreter._expr(argExpressions.first);
@@ -231,7 +260,7 @@ class RunFuncDecl extends ExtFuncDecl {
 
     final int exitCode = await interpreter.runProcess(
       command: command,
-      workingDir: env.workingDir,
+      workingDir: context.workingDir,
     );
     if (exitCode != 0) {
       _throwRuntimeError('"${command.join(' ')}" exited with code $exitCode');

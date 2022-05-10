@@ -23,7 +23,7 @@ final Future<List<io.File>> buildFiles = (() async {
 class TestInterpreter extends Interpreter {
   TestInterpreter({
     required super.config,
-    required super.env,
+    required super.context,
   });
 
   final StringBuffer stdoutBuffer = StringBuffer();

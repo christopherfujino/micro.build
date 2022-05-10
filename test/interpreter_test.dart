@@ -34,7 +34,7 @@ Future<void> main() async {
         await Parser(tokenList: tokenList, source: sourceCode).parse();
     await TestInterpreter(
       config: config,
-      env: InterpreterEnv(workingDir: tempDir),
+      context: Context(workingDir: tempDir),
     ).interpret('main');
   });
 
@@ -47,11 +47,10 @@ Future<void> main() async {
         await Parser(tokenList: tokenList, source: sourceCode).parse();
     final TestInterpreter interpreter = TestInterpreter(
       config: config,
-      env: InterpreterEnv(workingDir: tempDir),
+      context: Context(workingDir: tempDir),
     );
     await interpreter.interpret('main');
     expect(interpreter.stdoutBuffer.toString(), contains('hello world'));
-    expect(interpreter.stdoutBuffer.toString(), contains('yolo dawg'));
   });
 
   test('comments are skipped', () async {
@@ -63,7 +62,7 @@ Future<void> main() async {
         await Parser(tokenList: tokenList, source: sourceCode).parse();
     final TestInterpreter interpreter = TestInterpreter(
       config: config,
-      env: InterpreterEnv(workingDir: tempDir),
+      context: Context(workingDir: tempDir),
     );
     await interpreter.interpret('main');
     expect(interpreter.stdoutBuffer.toString().trim(), isNot(contains('hello world')));
@@ -78,7 +77,7 @@ Future<void> main() async {
         await Parser(tokenList: tokenList, source: sourceCode).parse();
     final TestInterpreter interpreter = TestInterpreter(
       config: config,
-      env: InterpreterEnv(workingDir: tempDir),
+      context: Context(workingDir: tempDir),
     );
     await interpreter.interpret('main');
     expect(
@@ -88,6 +87,24 @@ Future<void> main() async {
         'test',
         'main',
       ]),
+    );
+  });
+
+  test('print prints', () async {
+    final SourceCode sourceCode = SourceCode(
+        await io.File('test/build_files/print_test.build').readAsString());
+    final List<Token> tokenList =
+        await Scanner.fromSourceCode(sourceCode).scan();
+    final Config config =
+        await Parser(tokenList: tokenList, source: sourceCode).parse();
+    final TestInterpreter interpreter = TestInterpreter(
+      config: config,
+      context: Context(workingDir: tempDir),
+    );
+    await interpreter.interpret('main');
+    expect(
+      interpreter.stdoutBuffer.toString().split('\n'),
+      contains('Hello, world!'),
     );
   });
 
@@ -105,7 +122,7 @@ target main() {
     await expectLater(
       () => TestInterpreter(
         config: config,
-        env: InterpreterEnv(workingDir: tempDir),
+        context: Context(workingDir: tempDir),
       ).interpret('non-main'),
       throwsA(
         isA<RuntimeError>().having(
