@@ -68,12 +68,6 @@ class Interpreter {
       }
     }
 
-    if (buildFunc == null) {
-      _throwRuntimeError(
-        'Target named "${target.name}" does not define a "build()" function',
-      );
-    }
-
     // Find hooks
     final Iterable<Decl> depsIterable = target.declarations.where((Decl decl) {
       return decl is ConstDecl && decl.name == 'deps';
@@ -83,6 +77,7 @@ class Interpreter {
       _throwRuntimeError('More than one declaration of "deps"');
     }
 
+    // TODO fingerprint before visiting deps
     if (deps != null) {
       final Object? depsValue = await _expr(deps.initialValue, ctx);
       if (depsValue is! List<Object?>) {
@@ -99,7 +94,9 @@ class Interpreter {
 
     stdoutPrint('\nExecuting target "$name"...\n');
 
-    await _executeFunc(buildFunc, ctx);
+    if (buildFunc != null) {
+      await _executeFunc(buildFunc, ctx);
+    }
   }
 
   Future<void> _stmt(Stmt stmt, Context ctx) async {
