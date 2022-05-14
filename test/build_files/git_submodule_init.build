@@ -1,4 +1,6 @@
-target main() {
-  run("git submodule init");
-  run("git submodule update");
+target main {
+  function build() {
+    run("git submodule init");
+    run("git submodule update");
+  }
 }

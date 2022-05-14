@@ -1,11 +1,21 @@
-target main(compile, test) {
-  run("echo main");
+target main {
+  const deps = [compile, test];
+
+  function build() {
+    run("echo main");
+  }
 }
 
-target compile() {
-  run("echo compile");
+target compile {
+  function build() {
+    run("echo compile");
+  }
 }
 
-target test(compile) {
-  run("echo test");
+target test {
+  const deps = [compile];
+
+  function build() {
+    run("echo test");
+  }
 }

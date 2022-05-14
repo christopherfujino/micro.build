@@ -35,7 +35,7 @@ class BuildCommand extends Command<void> {
       workingDir.path,
       kSourceFileName,
     ].join(io.Platform.pathSeparator));
-    final Context context = Context(workingDir: workingDir);
+    final Context ctx = Context(workingDir: workingDir);
 
     if (!sourceFile.existsSync()) {
       throw RuntimeError(
@@ -51,7 +51,7 @@ class BuildCommand extends Command<void> {
 
     await Interpreter(
       config: config,
-      context: context,
+      ctx: ctx,
     ).interpret(target);
   }
 }

@@ -1,3 +1,5 @@
-target main() {
-  #run("echo hello world");
+target main {
+  function build() {
+    #run("echo hello world");
+  }
 }

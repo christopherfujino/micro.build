@@ -8,13 +8,13 @@ typedef Printer = void Function(String);
 class Interpreter {
   Interpreter({
     required this.config,
-    required this.context,
+    required this.ctx,
   });
 
   final Config config;
-  final Context context;
+  final Context ctx;
 
-  final Map<String, FunctionDecl> _functionBindings = <String, FunctionDecl>{};
+  final Map<String, FuncDecl> _functionBindings = <String, FuncDecl>{};
 
   final Map<String, TargetDecl> _targetBindings = <String, TargetDecl>{};
 
@@ -39,10 +39,14 @@ class Interpreter {
     _registerDeclarations();
 
     // interpret target
-    await _interpretTarget(targetName, <String>{});
+    await _interpretTarget(targetName, <String>{}, ctx);
   }
 
-  Future<void> _interpretTarget(String name, Set<String> visitedTargets) async {
+  Future<void> _interpretTarget(
+    String name,
+    Set<String> visitedTargets,
+    Context ctx,
+  ) async {
     visitedTargets.add(name);
     // Determine target to run from [targetName]
     final TargetDecl? target = _targetBindings[name];
@@ -50,25 +54,60 @@ class Interpreter {
       _throwRuntimeError('There is no defined target named $name');
     }
 
-    for (final IdentifierRef dep in target.deps) {
-      if (!visitedTargets.contains(dep.name)) {
-        await _interpretTarget(dep.name, visitedTargets);
+    ConstDecl? deps;
+    FuncDecl? buildFunc;
+
+    for (final Decl decl in target.declarations) {
+      if (decl is ConstDecl && decl.name == 'deps') {
+        deps = decl;
+        continue;
+      }
+      if (decl is FuncDecl && decl.name == 'build') {
+        buildFunc = decl;
+        continue;
+      }
+    }
+
+    if (buildFunc == null) {
+      _throwRuntimeError(
+        'Target named "${target.name}" does not define a "build()" function',
+      );
+    }
+
+    // Find hooks
+    final Iterable<Decl> depsIterable = target.declarations.where((Decl decl) {
+      return decl is ConstDecl && decl.name == 'deps';
+    });
+
+    if (depsIterable.length > 1) {
+      _throwRuntimeError('More than one declaration of "deps"');
+    }
+
+    if (deps != null) {
+      final Object? depsValue = await _expr(deps.initialValue, ctx);
+      if (depsValue is! List<Object?>) {
+        _throwRuntimeError('"deps" constant must be a list of target names');
+      }
+
+      for (final Object? dep in depsValue) {
+        final TargetDecl targetDep = dep! as TargetDecl;
+        if (!visitedTargets.contains(targetDep.name)) {
+          await _interpretTarget(targetDep.name, visitedTargets, ctx);
+        }
       }
     }
 
     stdoutPrint('\nExecuting target "$name"...\n');
 
-    for (final Stmt stmt in target.statements) {
-      await _stmt(stmt);
-    }
+    await _executeFunc(buildFunc, ctx);
   }
 
-  Future<void> _stmt(Stmt stmt) async {
+  Future<void> _stmt(Stmt stmt, Context ctx) async {
     if (stmt is FunctionExitStmt) {
       _throwRuntimeError('Unimplemented statement type ${stmt.runtimeType}');
     }
     if (stmt is BareStmt) {
-      await _bareStatement(stmt);
+      await _bareStatement(stmt, ctx);
       return;
     }
     _throwRuntimeError('Unimplemented statement type ${stmt.runtimeType}');
@@ -88,53 +127,71 @@ class Interpreter {
     }
   }
 
-  Future<void> _bareStatement(BareStmt statement) async {
-    await _expr(statement.expression);
+  Future<void> _bareStatement(BareStmt statement, Context ctx) async {
+    await _expr(statement.expression, ctx);
   }
 
-  Future<Object?> _expr(Expr expr) {
+  Future<Object?> _expr(Expr expr, Context ctx) {
     if (expr is CallExpr) {
-      return _callExpr(expr);
+      return _callExpr(expr, ctx);
     }
 
     if (expr is ListLiteral) {
-      return _list(expr.elements);
+      return _list(expr.elements, ctx);
     }
 
     if (expr is StringLiteral) {
       return _stringLiteral(expr);
     }
-    _throwRuntimeError('Unimplemented expression type ${expr.runtimeType}');
+
+    if (expr is IdentifierRef) {
+      return _resolveIdentifier(expr, ctx);
+    }
+    _throwRuntimeError('Unimplemented expression type $expr');
   }
 
-  Future<Object?> _callExpr(CallExpr expr) async {
+  Future<Object?> _callExpr(CallExpr expr, Context ctx) async {
     if (_externalFunctions.containsKey(expr.name)) {
       final ExtFuncDecl func = _externalFunctions[expr.name]!;
       await func.interpret(
         argExpressions: expr.argList,
         interpreter: this,
-        context: context,
+        ctx: ctx,
       );
       return null;
     }
 
-    final FunctionDecl? func = _functionBindings[expr.name];
+    final FuncDecl? func = _functionBindings[expr.name];
     if (func == null) {
       _throwRuntimeError('Tried to call undeclared function ${expr.name}');
     }
+
+    return _executeFunc(func, ctx);
+  }
+
+  Future<Object?> _executeFunc(FuncDecl func, Context ctx) async {
     for (final Stmt stmt in func.statements) {
       if (stmt is FunctionExitStmt) {
-        return _expr(stmt.returnValue);
+        return _expr(stmt.returnValue, ctx);
       }
-      await _stmt(stmt);
+      await _stmt(stmt, ctx);
     }
     return null;
   }
 
-  Future<List<Object?>> _list(List<Expr> expressions) async {
+  Future<Object?> _resolveIdentifier(
+      IdentifierRef identifier, Context ctx) async {
+    if (_targetBindings.containsKey(identifier.name)) {
+      return _targetBindings[identifier.name]!;
+    }
+    throw UnimplementedError(
+        "Don't know how to resolve identifier ${identifier.name}");
+  }
+
+  Future<List<Object?>> _list(List<Expr> expressions, Context ctx) async {
     final List<Object?> elements = <Object?>[];
     for (final Expr element in expressions) {
-      elements.add(await _expr(element));
+      elements.add(await _expr(element, ctx));
     }
     return elements;
   }
@@ -193,33 +250,40 @@ class Context {
   const Context({
     this.workingDir,
     this.env,
+    this.parent,
   });
 
   final io.Directory? workingDir;
   final Map<String, String>? env;
+  final Context? parent;
 }
 
 /// An external [FunctionDecl].
-abstract class ExtFuncDecl extends FunctionDecl {
+abstract class ExtFuncDecl extends FuncDecl {
   const ExtFuncDecl({
     required super.name,
+    required super.params,
   }) : super(statements: const <Stmt>[]);
 
   Future<void> interpret({
     required List<Expr> argExpressions,
     required Interpreter interpreter,
-    required Context context,
+    required Context ctx,
   });
 }
 
 class PrintFuncDecl extends ExtFuncDecl {
-  const PrintFuncDecl() : super(name: 'print');
+  const PrintFuncDecl()
+      : super(
+          name: 'print',
+          params: const <IdentifierRef>[IdentifierRef('msg')],
+        );
 
   @override
   Future<void> interpret({
     required List<Expr> argExpressions,
     required Interpreter interpreter,
-    required Context context,
+    required Context ctx,
   }) async {
     if (argExpressions.length != 1) {
       _throwRuntimeError(
@@ -233,13 +297,17 @@ class PrintFuncDecl extends ExtFuncDecl {
 }
 
 class RunFuncDecl extends ExtFuncDecl {
-  const RunFuncDecl() : super(name: 'run');
+  const RunFuncDecl()
+      : super(
+          name: 'run',
+          params: const <IdentifierRef>[IdentifierRef('command')],
+        );
 
   @override
   Future<void> interpret({
     required List<Expr> argExpressions,
     required Interpreter interpreter,
-    required Context context,
+    required Context ctx,
   }) async {
     if (argExpressions.length != 1) {
       _throwRuntimeError(
@@ -247,7 +315,7 @@ class RunFuncDecl extends ExtFuncDecl {
       );
     }
 
-    final Object? value = await interpreter._expr(argExpressions.first);
+    final Object? value = await interpreter._expr(argExpressions.first, ctx);
     final List<String> command;
     if (value is String) {
       command = value.split(' ');
@@ -262,7 +330,7 @@ class RunFuncDecl extends ExtFuncDecl {
 
     final int exitCode = await interpreter.runProcess(
       command: command,
-      workingDir: context.workingDir,
+      workingDir: ctx.workingDir,
     );
     if (exitCode != 0) {
       _throwRuntimeError('"${command.join(' ')}" exited with code $exitCode');

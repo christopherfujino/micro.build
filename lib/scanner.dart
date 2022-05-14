@@ -5,6 +5,18 @@ enum TokenType {
 
   /// Keyword "target".
   target,
+  /// Keyword "const".
+  constant,
+  /// Keyword "function".
+  func,
+
+  // operators
+
+  /// Operator "="
+  assignment,
+
+  /// Operator "=="
+  equals,
 
   // brackets
   openParen,
@@ -69,12 +81,16 @@ class Scanner {
   int _index = 0;
   int _line = 1;
   int _lastNewlineIndex = 0;
-  int get _char => _index - _lastNewlineIndex + 1;
+  int get _char => _index - _lastNewlineIndex;
 
   // TODO figure out unicode
   Future<List<Token>> scan() async {
     while (_index < source.length) {
       if (_scanWhitespace()) {
+        continue;
+      }
+
+      if (_scanOperator()) {
         continue;
       }
 
@@ -106,25 +122,61 @@ class Scanner {
     return _tokenList;
   }
 
-  static const List<String> kKeywords = <String>[
-    'target',
-  ];
-
   bool _scanKeyword() {
     // TODO this can be faster, use linear search, not [.startsWith()]
     final String rest = source.substring(_index);
-    for (final String keyword in kKeywords) {
-      if (rest.startsWith(keyword)) {
-        _index += keyword.length;
+    final Match? match = kIdentifierPattern.matchAsPrefix(rest);
+    if (match == null) {
+      return false;
+    }
+    TokenType? tokenType;
+    final String keyword = match.group(0)!;
+    switch (keyword) {
+      case 'target':
+        tokenType = TokenType.target;
+        break;
+      case 'const':
+        tokenType = TokenType.constant;
+        break;
+      case 'function':
+        tokenType = TokenType.func;
+        break;
+      default:
+        return false;
+    }
+    _tokenList.add(
+      Token(
+        type: tokenType,
+        line: _line,
+        char: _char,
+      ),
+    );
+    _index += keyword.length;
+    return true;
+  }
+
+  bool _scanOperator() {
+    if (source[_index] == '=') {
+      if (source[_index + 1] == '=') {
         _tokenList.add(
           Token(
-            type: TokenType.target,
+            type: TokenType.equals,
             line: _line,
             char: _char,
           ),
         );
+        _index += 2;
         return true;
       }
+      _tokenList.add(
+        Token(
+          type: TokenType.assignment,
+          line: _line,
+          char: _char,
+        ),
+      );
+      _index += 1;
+      return true;
     }
     return false;
   }
@@ -137,8 +189,6 @@ class Scanner {
     final String rest = source.substring(_index);
     final Match? match = kStringPattern.matchAsPrefix(rest);
     if (match != null) {
-      // increment index including quotes
-      _index += match.group(0)!.length;
       _tokenList.add(
         StringToken(
           type: TokenType.stringLiteral,
@@ -148,6 +198,8 @@ class Scanner {
           char: _char,
         ),
       );
+      // increment index including quotes
+      _index += match.group(0)!.length;
       return true;
     }
     return false;
@@ -161,7 +213,6 @@ class Scanner {
     final Match? match = kIdentifierPattern.matchAsPrefix(rest);
     if (match != null) {
       final String stringMatch = match.group(0)!;
-      _index += stringMatch.length;
       _tokenList.add(
         StringToken(
           type: TokenType.identifier,
@@ -170,6 +221,7 @@ class Scanner {
           char: _char,
         ),
       );
+      _index += stringMatch.length;
       return true;
     }
     return false;
@@ -195,7 +247,6 @@ class Scanner {
   bool _scanBracket() {
     switch (source[_index]) {
       case '{':
-        _index += 1;
         _tokenList.add(
           Token(
             type: TokenType.openCurlyBracket,
@@ -203,9 +254,9 @@ class Scanner {
             char: _char,
           ),
         );
+        _index += 1;
         return true;
       case '}':
-        _index += 1;
         _tokenList.add(
           Token(
             type: TokenType.closeCurlyBracket,
@@ -213,9 +264,9 @@ class Scanner {
             char: _char,
           ),
         );
+        _index += 1;
         return true;
       case '[':
-        _index += 1;
         _tokenList.add(
           Token(
             type: TokenType.openSquareBracket,
@@ -223,9 +274,9 @@ class Scanner {
             char: _char,
           ),
         );
+        _index += 1;
         return true;
       case ']':
-        _index += 1;
         _tokenList.add(
           Token(
             type: TokenType.closeSquareBracket,
@@ -233,9 +284,9 @@ class Scanner {
             char: _char,
           ),
         );
+        _index += 1;
         return true;
       case '(':
-        _index += 1;
         _tokenList.add(
           Token(
             type: TokenType.openParen,
@@ -243,9 +294,9 @@ class Scanner {
             char: _char,
           ),
         );
+        _index += 1;
         return true;
       case ')':
-        _index += 1;
         _tokenList.add(
           Token(
             type: TokenType.closeParen,
@@ -253,6 +304,7 @@ class Scanner {
             char: _char,
           ),
         );
+        _index += 1;
         return true;
       default:
         return false;
@@ -262,7 +314,6 @@ class Scanner {
   bool _scanMisc() {
     switch (source[_index]) {
       case ',':
-        _index += 1;
         _tokenList.add(
           Token(
             type: TokenType.comma,
@@ -270,9 +321,9 @@ class Scanner {
             char: _char,
           ),
         );
+        _index += 1;
         return true;
       case ';':
-        _index += 1;
         _tokenList.add(
           Token(
             type: TokenType.semicolon,
@@ -280,6 +331,7 @@ class Scanner {
             char: _char,
           ),
         );
+        _index += 1;
         return true;
       case '#':
         // eat all text until end of line

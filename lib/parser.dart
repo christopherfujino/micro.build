@@ -25,8 +25,9 @@ class Parser {
     return tokenList[_index];
   }
 
+  final List<Decl> declarations = <Decl>[];
+
   Future<Config> parse() async {
-    final List<Decl> declarations = <Decl>[];
     while (_currentToken != null) {
       declarations.add(_decl());
     }
@@ -34,12 +35,39 @@ class Parser {
     return Config(declarations);
   }
 
-  /// Parses [TargetDecl].
-  Decl _decl() {
+  /// Parse a [Decl].
+  ///
+  /// If [allowedDeclarations] is null, all declaration types are checked for.
+  Decl _decl({Set<Type>? allowedDeclarations}) {
     final Token currentToken = _currentToken!;
     switch (currentToken.type) {
       case TokenType.target:
+        if (allowedDeclarations != null &&
+            !allowedDeclarations.contains(TargetDecl)) {
+          _throwParseError(
+            currentToken,
+            'A target declaration is not allowed in the current context.',
+          );
+        }
         return _targetDecl();
+      case TokenType.constant:
+        if (allowedDeclarations != null &&
+            !allowedDeclarations.contains(ConstDecl)) {
+          _throwParseError(
+            currentToken,
+            'A constant declaration is not allowed in the current context.',
+          );
+        }
+        return _constDecl();
+      case TokenType.func:
+        if (allowedDeclarations != null &&
+            !allowedDeclarations.contains(FuncDecl)) {
+          _throwParseError(
+            currentToken,
+            'A constant declaration is not allowed in the current context.',
+          );
+        }
+        return _funcDecl();
       default:
         _throwParseError(
           currentToken,
@@ -48,7 +76,10 @@ class Parser {
     }
   }
 
-  Never _throwParseError(Token token, String message) {
+  Never _throwParseError(Token? token, String message) {
+    if (token == null) {
+      throw ParseError('Parse error: $message');
+    }
     throw ParseError(
       '\n${source.getDebugMessage(token.line, token.char)}\n'
       'Parse error: $token - $message\n',
@@ -62,19 +93,62 @@ class Parser {
     _consume(TokenType.target);
     final StringToken name = _consume(TokenType.identifier) as StringToken;
 
-    _consume(TokenType.openParen);
-    final List<IdentifierRef> deps = _paramList();
-    _consume(TokenType.closeParen);
     _consume(TokenType.openCurlyBracket);
+
+    final List<Decl> declarations = <Decl>[];
+    while (_currentToken?.type != TokenType.closeCurlyBracket) {
+      if (_currentToken == null) {
+        _throwParseError(
+          null,
+          'Reached the end of the file trying to parse target "$name"',
+        );
+      }
+      final Decl decl = _decl();
+      declarations.add(decl);
+    }
+    _consume(TokenType.closeCurlyBracket);
+    return TargetDecl(
+      name: name.value,
+      declarations: declarations,
+    );
+  }
+
+  /// Parse a [ConstDecl].
+  ConstDecl _constDecl() {
+    _consume(TokenType.constant);
+    final StringToken name = _consume(TokenType.identifier) as StringToken;
+
+    _consume(TokenType.assignment);
+
+    final Expr value = _expr();
+
+    _consume(TokenType.semicolon);
+
+    return ConstDecl(
+      name: name.value,
+      initialValue: value,
+    );
+  }
+
+  FuncDecl _funcDecl() {
+    _consume(TokenType.func);
+    final StringToken name = _consume(TokenType.identifier) as StringToken;
+    _consume(TokenType.openParen);
+    final List<IdentifierRef> params = _paramList();
+    _consume(TokenType.closeParen);
+
+    _consume(TokenType.openCurlyBracket);
+
     final List<Stmt> statements = <Stmt>[];
     while (_currentToken!.type != TokenType.closeCurlyBracket) {
       statements.add(_stmt());
     }
     _consume(TokenType.closeCurlyBracket);
-    return TargetDecl(
+
+    return FuncDecl(
       name: name.value,
+      params: params,
       statements: statements,
-      deps: deps,
     );
   }
 
@@ -111,7 +185,7 @@ class Parser {
     if (_currentToken!.type == TokenType.identifier) {
       return _identifierExpr();
     }
-    _throwParseError(_currentToken!, 'Unimplemented expression type');
+    _throwParseError(_currentToken, 'Unimplemented expression type');
   }
 
   /// An identifier reference.
@@ -241,21 +315,30 @@ abstract class Decl {
 class TargetDecl extends Decl {
   TargetDecl({
     required super.name,
-    required this.statements,
-    required this.deps,
+    required this.declarations,
   });
 
-  final Iterable<Stmt> statements;
-  final Iterable<IdentifierRef> deps;
+  final Iterable<Decl> declarations;
 }
 
-class FunctionDecl extends Decl {
-  const FunctionDecl({
+class ConstDecl extends Decl {
+  ConstDecl({
+    required super.name,
+    required this.initialValue,
+  });
+
+  final Expr initialValue;
+}
+
+class FuncDecl extends Decl {
+  const FuncDecl({
     required super.name,
     required this.statements,
+    required this.params,
   });
 
   final List<Stmt> statements;
+  final List<IdentifierRef> params;
 }
 
 abstract class Stmt {
@@ -291,6 +374,9 @@ class IdentifierRef extends Expr {
   const IdentifierRef(this.name);
 
   final String name;
+
+  @override
+  String toString() => 'IdentifierRef: "$name"';
 }
 
 class StringLiteral extends Expr {

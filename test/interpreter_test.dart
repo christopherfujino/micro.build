@@ -34,7 +34,7 @@ Future<void> main() async {
         await Parser(tokenList: tokenList, source: sourceCode).parse();
     await TestInterpreter(
       config: config,
-      context: Context(workingDir: tempDir),
+      ctx: Context(workingDir: tempDir),
     ).interpret('main');
   });
 
@@ -47,7 +47,7 @@ Future<void> main() async {
         await Parser(tokenList: tokenList, source: sourceCode).parse();
     final TestInterpreter interpreter = TestInterpreter(
       config: config,
-      context: Context(workingDir: tempDir),
+      ctx: Context(workingDir: tempDir),
     );
     await interpreter.interpret('main');
     expect(interpreter.stdoutBuffer.toString(), contains('hello world'));
@@ -62,7 +62,7 @@ Future<void> main() async {
         await Parser(tokenList: tokenList, source: sourceCode).parse();
     final TestInterpreter interpreter = TestInterpreter(
       config: config,
-      context: Context(workingDir: tempDir),
+      ctx: Context(workingDir: tempDir),
     );
     await interpreter.interpret('main');
     expect(interpreter.stdoutBuffer.toString().trim(), isNot(contains('hello world')));
@@ -77,7 +77,7 @@ Future<void> main() async {
         await Parser(tokenList: tokenList, source: sourceCode).parse();
     final TestInterpreter interpreter = TestInterpreter(
       config: config,
-      context: Context(workingDir: tempDir),
+      ctx: Context(workingDir: tempDir),
     );
     await interpreter.interpret('main');
     expect(
@@ -99,7 +99,7 @@ Future<void> main() async {
         await Parser(tokenList: tokenList, source: sourceCode).parse();
     final TestInterpreter interpreter = TestInterpreter(
       config: config,
-      context: Context(workingDir: tempDir),
+      ctx: Context(workingDir: tempDir),
     );
     await interpreter.interpret('main');
     expect(
@@ -111,8 +111,10 @@ Future<void> main() async {
   test('RuntimeError if told to interpret target that does not exist',
       () async {
     final SourceCode sourceCode = SourceCode('''
-target main() {
-  run("echo hello world");
+target main {
+  function build() {
+    run("echo hello world");
+  }
 }
 ''');
     final List<Token> tokenList =
@@ -122,7 +124,7 @@ target main() {
     await expectLater(
       () => TestInterpreter(
         config: config,
-        context: Context(workingDir: tempDir),
+        ctx: Context(workingDir: tempDir),
       ).interpret('non-main'),
       throwsA(
         isA<RuntimeError>().having(
