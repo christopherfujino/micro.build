@@ -12,12 +12,22 @@ as a lightweight solution for configuring monorepos
 ```
 var pythonBinary = "python";
 
-target main(frontend, backend, python) {
-  run([pythonBinary, "tool/integration_test.py"]);
+target main {
+  const deps = [frontend, backend, python];
+
+  function build() {
+    run([pythonBinary, "tool/integration_test.py"]);
+  }
 }
 
-target frontend(submodules) {
-  with ({"cwd": $cwd + "site"}) { # Unimplemented
+target frontend {
+  const deps = [submodules];
+
+  function context(ctx) {
+    ctx.cwd += ctx.cwd + "site";
+  }
+
+  function build() {
     # Leverage JS tooling
     run("npm install");
     run("run run analyze");
@@ -26,8 +36,14 @@ target frontend(submodules) {
   }
 }
 
-target backend(submodules) {
-  with ({"cwd": $cwd + "server"}) {
+target backend {
+  const deps = [submodules];
+
+  function context(ctx) {
+    ctx.cwd += ctx.cwd + "server";
+  }
+
+  function build() {
     # Leverage Go tooling
     run("go get");
     run("go vet");
@@ -37,22 +53,26 @@ target backend(submodules) {
 }
 
 target python() {
-  var result = runWithErrors([pythonBinary, "--version"]); # Unimplemented
-  if (result.exitCode == 0) { # Unimplemented
-    # Returning from a `target` means it succeeded
-    return; # Unimplemented
+  function build() {
+    var result = runWithErrors([pythonBinary, "--version"]); # Unimplemented
+    if (result.exitCode == 0) { # Unimplemented
+      # Returning from a `target` means it succeeded
+      return; # Unimplemented
+    }
+    pythonBinary = "python3";
+    result = runWithErrors([pythonBinary, "--version"]);
+    if (result.exitCode == 0) {
+      return;
+    }
+    fail("Could not resolve python or python3 from the $PATH");
   }
-  pythonBinary = "python3";
-  result = runWithErrors([pythonBinary, "--version"]);
-  if (result.exitCode == 0) {
-    return;
-  }
-  fail("Could not resolve python or python3 from the $PATH");
 }
 
-target submodules() {
-  run("git submodule init");
-  run("git submodule update");
+target submodules {
+  function build() {
+    run("git submodule init");
+    run("git submodule update");
+  }
 }
 ```
 
@@ -89,12 +109,20 @@ entered (`$cwd` is updated to the containing directory of the build file), or
 when in a `with` block.
 
 ```
-target main(dep) {
-  print("foo is " + $env["foo"]); # "foo is "
+target main {
+  const deps = [dep];
+
+  function build() {
+    print("foo is " + $env["foo"]); # "foo is "
+  }
 }
 
-target dep() {
-  with ({"env": {"foo": "bar"}}) {
+target dep {
+  function context(ctx) {
+    ctx.env += {"foo": "bar"};
+  }
+
+  function build() {
     print("foo is " + $env["foo"]); # "foo is bar"
   }
 }
@@ -116,7 +144,7 @@ Keyword | Description | Implemented?
 `target` | A build target. See [Dependency Graph](#dependency-graph) for more context. | [x]
 `var` | A mutable variable | [ ]
 `const` | An immutable variable (attempting to modify a `const` `Map` is a runtime error) | [ ]
-`with` | Creates a context block, in which `$cwd` or `$env` is modified | [ ]
+`function` | A custom function. | [x]
 
 ### Primitives
 
