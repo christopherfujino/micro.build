@@ -145,7 +145,7 @@ class Interpreter {
 
   Future<int> runProcess({
     required List<String> command,
-    required io.Directory workingDir,
+    io.Directory? workingDir,
   }) async {
     stdoutPrint('Running command "${command.join(' ')}"...');
     final String executable = command.first;
@@ -153,7 +153,7 @@ class Interpreter {
     final io.Process process = await io.Process.start(
       executable,
       rest,
-      workingDirectory: workingDir.absolute.path,
+      workingDirectory: workingDir?.absolute.path,
     );
     process.stdout
         .transform(utf8.decoder)
