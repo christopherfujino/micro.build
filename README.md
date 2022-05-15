@@ -24,7 +24,7 @@ target frontend {
   const deps = [submodules];
 
   function context(ctx) {
-    ctx.cwd += ctx.cwd + "site";
+    ctx.cwd += "site";
   }
 
   function build() {
@@ -40,7 +40,7 @@ target backend {
   const deps = [submodules];
 
   function context(ctx) {
-    ctx.cwd += ctx.cwd + "server";
+    ctx.cwd += "server";
   }
 
   function build() {
