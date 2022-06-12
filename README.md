@@ -30,7 +30,7 @@ target frontend {
   function build() {
     # Leverage JS tooling
     run("npm install");
-    run("run run analyze");
+    run("npm run analyze");
     run("npm test");
     run("npm run build");
   }
