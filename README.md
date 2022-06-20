@@ -1,11 +1,12 @@
-# monobuild
+# micro.build
 
 A small build system for big repos.
 
-Monobuild is a simple build system (think make) with an expressive, obvious
-domain-specific language (think Python). Monobuild is not a replacement for
-highly specialized build systems like Cmake, Gradle, or Webpack, but is intended
-as a lightweight solution for configuring monorepos
+micro.build is a simple build system (think make) with an expressive, obvious
+domain-specific language (think Python). micro.build is not a replacement for
+robust build systems that know how to manage dependencies for a specific
+toolchain like Cmake, Gradle, or Webpack. Rather, micro.build can be used to
+compose multiple sub-projects across different toolchains in a larger project.
 
 ## Examples
 
