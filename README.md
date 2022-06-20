@@ -10,13 +10,13 @@ as a lightweight solution for configuring monorepos
 ## Examples
 
 ```
-var pythonBinary = "python";
+import "../third_party/python.micro.build" as python;
 
 target main {
-  const deps = [frontend, backend, python];
+  const deps = [frontend, backend, python.main];
 
   function build() {
-    run([pythonBinary, "tool/integration_test.py"]);
+    run([python.main.binary, "tool/integration_test.py"]);
   }
 }
 
@@ -49,22 +49,6 @@ target backend {
     run("go vet");
     run("go test");
     run("go build");
-  }
-}
-
-target python() {
-  function build() {
-    var result = runWithErrors([pythonBinary, "--version"]); # Unimplemented
-    if (result.exitCode == 0) { # Unimplemented
-      # Returning from a `target` means it succeeded
-      return; # Unimplemented
-    }
-    pythonBinary = "python3";
-    result = runWithErrors([pythonBinary, "--version"]);
-    if (result.exitCode == 0) {
-      return;
-    }
-    fail("Could not resolve python or python3 from the $PATH");
   }
 }
 
