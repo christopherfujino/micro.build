@@ -8,7 +8,7 @@ target compile {
   function build() {
     # TODO enable cache checks
     run("rm -rf build");
-    run("mkdir build");
+    run("mkdir build"); # TODO make runWithErrors
     run("dart compile exe ./bin/micro_build.dart -o build/mb");
   }
 }
