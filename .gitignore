@@ -2,3 +2,8 @@
 .packages
 
 build/
+
+# C
+
+a.out
+*.o
