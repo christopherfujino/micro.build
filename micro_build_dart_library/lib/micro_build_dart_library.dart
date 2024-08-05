@@ -37,7 +37,7 @@ class BuildFailure {
   const BuildFailure(this.reason);
 
   @override
-  String toString() => 'Build failed because:\n\n$reason';
+  String toString() => reason;
 }
 
 sealed class Target {
@@ -107,6 +107,9 @@ class TargetAction implements Target {
     );
     final inputFailures = inputResults.whereType<BuildFailure>();
     if (inputFailures.isNotEmpty) {
+      if (inputFailures.length == 1) {
+        return inputFailures.single;
+      }
       return BuildFailure(inputFailures.toString());
     }
 
@@ -141,5 +144,11 @@ class TargetFile implements Target {
   final bool needsBuild = false;
 
   @override
-  Future<BuildFailure?> build() => Future<BuildFailure?>.value(null);
+  Future<BuildFailure?> build() async {
+    if (!io.File(path.toString()).existsSync()) {
+      return BuildFailure('The file $path does not exist!');
+    }
+
+    return null;
+  }
 }

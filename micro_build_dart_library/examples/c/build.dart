@@ -1,6 +1,6 @@
-import 'package:micro_build_dart_library/micro_build_dart_library.dart';
+import '../../lib/micro_build_dart_library.dart';
 
-Future<void> main(List<String> arguments) async {
+Future<int> main(List<String> arguments) async {
   const aDotO = TargetAction(
     name: 'a.o',
     outputs: [
@@ -45,5 +45,12 @@ Future<void> main(List<String> arguments) async {
     ),
   );
 
-  print(await aOut.build());
+  final failure = await aOut.build();
+
+  if (failure != null) {
+    print('Build failed because:\n\n$failure');
+
+    return 1;
+  }
+  return 0;
 }
