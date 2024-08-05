@@ -6,7 +6,13 @@ class Path {
   // TODO validate
   const Path(this.value);
 
-  DateTime get timeStamp => io.File(toString()).statSync().modified;
+  DateTime? get timeStamp {
+    final stat = io.File(toString()).statSync();
+    if (stat.type == io.FileSystemEntityType.notFound) {
+      return null;
+    }
+    return stat.modified;
+  }
 
   @override
   // TODO handle platform
@@ -29,12 +35,17 @@ class BuildFailure {
   final String reason;
 
   const BuildFailure(this.reason);
+
+  @override
+  String toString() => 'Build failed because:\n\n$reason';
 }
 
 sealed class Target {
   Future<BuildFailure?> build();
 
   List<Path> get outputs;
+
+  bool get needsBuild;
 }
 
 class TargetAction implements Target {
@@ -52,13 +63,22 @@ class TargetAction implements Target {
     required this.action,
   });
 
-  bool get _needsBuild {
+  @override
+  bool get needsBuild {
+    // If any inputs need to be built, we also need to rebuild.
+    if (inputs.map((input) => input.needsBuild).any((b) => b)) {
+      return true;
+    }
     final outputTimestamps = outputs.map((output) => output.timeStamp);
-    final mostRecentInputTimestamp = inputs.fold<DateTime>(
+    // null means input that *must* be rebuilt
+    final mostRecentInputTimestamp = inputs.fold<DateTime?>(
       DateTime(0),
       (acc, input) {
         final inputTimestamps = input.outputs.map((output) => output.timeStamp);
         for (final inputTimestamp in inputTimestamps) {
+          if (inputTimestamp == null || acc == null) {
+            return null;
+          }
           if (inputTimestamp.isAfter(acc)) {
             acc = inputTimestamp;
           }
@@ -66,12 +86,19 @@ class TargetAction implements Target {
         return acc;
       },
     );
-    return outputTimestamps.any((outputTimestamp) => outputTimestamp.isBefore(mostRecentInputTimestamp));
+    if (mostRecentInputTimestamp == null) {
+      // we must build an input
+      return true;
+    }
+    return outputTimestamps.any((outputTimestamp) {
+      return outputTimestamp == null ||
+          outputTimestamp.isBefore(mostRecentInputTimestamp);
+    });
   }
 
   @override
   Future<BuildFailure?> build() async {
-    if (!_needsBuild) {
+    if (!needsBuild) {
       print('$name is cached');
       return null;
     }
@@ -96,7 +123,9 @@ class TargetAction implements Target {
     }
 
     return BuildFailure(
-        '${action.program} ${action.arguments} failed with ${result.exitCode}');
+      '${action.program} ${action.arguments} failed with ${result.exitCode}:'
+      '\n\nSTDOUT: ${result.stdout}\n\nSTDERR: ${result.stderr}',
+    );
   }
 }
 
@@ -107,6 +136,9 @@ class TargetFile implements Target {
 
   @override
   List<Path> get outputs => [path];
+
+  @override
+  final bool needsBuild = false;
 
   @override
   Future<BuildFailure?> build() => Future<BuildFailure?>.value(null);
