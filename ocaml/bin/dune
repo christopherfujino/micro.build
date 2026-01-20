@@ -1,0 +1,4 @@
+(executable
+ (public_name micro_build)
+ (name main)
+ (libraries micro_build))

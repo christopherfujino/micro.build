@@ -1,0 +1,10 @@
+(library
+ (name micro_build))
+
+(menhir
+  (modules parser)
+  (flags
+    --exn-carries-state
+    --explain))
+
+(ocamllex scanner)
